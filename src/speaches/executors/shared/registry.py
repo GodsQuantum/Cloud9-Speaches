@@ -11,6 +11,12 @@ from speaches.executors.pyannote_diarization import (
     pyannote_diarization_model_registry,
 )
 from speaches.executors.silero_vad_v5 import SileroVADModelRegistry
+from speaches.executors.transcribe_cpp import (
+    TranscribeCppDiarizationModelManager,
+    TranscribeCppModelManager,
+    transcribe_cpp_diarization_model_registry,
+    transcribe_cpp_model_registry,
+)
 from speaches.executors.wespeaker_speaker_embedding import WespeakerSpeakerEmbeddingModelRegistry
 from speaches.executors.whisper import WhisperModelRegistry
 
@@ -43,6 +49,12 @@ class ExecutorRegistry:
             model_registry=parakeet_model_registry,
             task="automatic-speech-recognition",
         )
+        self._transcribe_cpp_executor = Executor(
+            name="transcribe.cpp",
+            model_manager=TranscribeCppModelManager(config.stt_model_ttl),
+            model_registry=transcribe_cpp_model_registry,
+            task="automatic-speech-recognition",
+        )
         self._piper_executor = Executor[PiperModelManager, PiperModelRegistry](
             name="piper",
             model_manager=PiperModelManager(config.tts_model_ttl, config.unstable_ort_opts),
@@ -71,6 +83,12 @@ class ExecutorRegistry:
             model_registry=pyannote_diarization_model_registry,
             task="speaker-diarization",
         )
+        self._transcribe_cpp_diarization_executor = Executor(
+            name="transcribe.cpp-diarization",
+            model_manager=TranscribeCppDiarizationModelManager(config.stt_model_ttl),
+            model_registry=transcribe_cpp_diarization_model_registry,
+            task="speaker-diarization",
+        )
         self._vad_executor = Executor[SileroVADModelManager, SileroVADModelRegistry](
             name="vad",
             model_manager=SileroVADModelManager(config.vad_model_ttl, config.unstable_ort_opts),
@@ -80,7 +98,7 @@ class ExecutorRegistry:
 
     @property
     def transcription(self):  # noqa: ANN201
-        return (self._whisper_executor, self._parakeet_executor)
+        return (self._whisper_executor, self._parakeet_executor, self._transcribe_cpp_executor)
 
     @property
     def translation(self):  # noqa: ANN201
@@ -96,7 +114,7 @@ class ExecutorRegistry:
 
     @property
     def diarization(self):  # noqa: ANN201
-        return (self._pyannote_diarization_executor,)
+        return (self._pyannote_diarization_executor, self._transcribe_cpp_diarization_executor)
 
     @property
     def vad(self):  # noqa: ANN201
@@ -106,10 +124,12 @@ class ExecutorRegistry:
         return (
             self._whisper_executor,
             self._parakeet_executor,
+            self._transcribe_cpp_executor,
             self._piper_executor,
             self._kokoro_executor,
             self._wespeaker_speaker_embedding_executor,
             self._pyannote_diarization_executor,
+            self._transcribe_cpp_diarization_executor,
             self._vad_executor,
         )
 

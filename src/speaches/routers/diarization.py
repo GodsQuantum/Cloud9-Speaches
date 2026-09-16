@@ -2,7 +2,7 @@ from collections.abc import Hashable, Iterator
 import logging
 from typing import TYPE_CHECKING, Annotated, Literal, cast
 
-from fastapi import APIRouter, Form, Response
+from fastapi import APIRouter, Form, HTTPException, Response
 from fastapi.responses import JSONResponse
 import numpy as np
 from pyannote.audio.core.pipeline import Pipeline
@@ -125,6 +125,29 @@ def diarize_audio(
 
     model_card_data = get_model_card_data_or_raise(model)
     executor = find_executor_for_model_or_raise(model, model_card_data, executor_registry.diarization)
+
+    if executor.name == "transcribe.cpp-diarization":
+        if known_speakers:
+            raise HTTPException(status_code=400, detail="Known-speaker matching is not supported by Sortformer")
+        result = executor.model_manager.diarize(model, audio)
+        segments = [
+            DiarizationSegment(
+                start=segment.t0_ms / 1000,
+                end=segment.t1_ms / 1000,
+                speaker=f"SPEAKER_{max(segment.speaker_id - 1, 0):02d}",
+            )
+            for segment in result.speaker_segments
+        ]
+        if response_format == "rttm":
+            file_id = audio.name or "audio"
+            lines = [
+                f"SPEAKER {file_id} 1 {segment.start:.3f} {segment.end - segment.start:.3f} <NA> <NA> {segment.speaker} <NA> <NA>"
+                for segment in segments
+            ]
+            return Response(content="\n".join(lines), media_type="text/plain")
+        return JSONResponse(
+            content=DiarizationResponse(duration=float(audio.duration), segments=segments).model_dump()
+        )
 
     with executor.model_manager.load_model(model) as pipeline:
         waveform = torch.from_numpy(audio.data).unsqueeze(0).float()

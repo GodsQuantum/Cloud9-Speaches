@@ -179,3 +179,6 @@ Thumbs.db
 scratchpad.md
 .claude/commands
 *.rttm
+
+# Generated Cloud9 runtime artifacts
+cloud9-artifacts/
