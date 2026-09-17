@@ -155,15 +155,16 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
     class FakeSession:
         def __enter__(self): return self
         def __exit__(self, *_args): return None
-        def run(self, pcm, **kwargs):
-            idx = len(calls)
-            calls.append(len(pcm))
-            text = outputs[idx]
-            return SimpleNamespace(
-                text=text, language=None,
-                segments=(SimpleNamespace(text=text, t0_ms=0, t1_ms=1000),),
-                words=(SimpleNamespace(text=text, t0_ms=0, t1_ms=500),),
-            )
+        def run_batch(self, pcms, **kwargs):
+            calls.append(([len(pcm) for pcm in pcms], kwargs))
+            return [
+                SimpleNamespace(
+                    text=text, language=None,
+                    segments=(SimpleNamespace(text=text, t0_ms=0, t1_ms=1000),),
+                    words=(SimpleNamespace(text=text, t0_ms=0, t1_ms=500),),
+                )
+                for text in outputs
+            ]
 
     fake_model = SimpleNamespace(
         arch="qwen3_asr", capabilities=SimpleNamespace(languages=()),
@@ -180,7 +181,7 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
     )
     response = manager.handle_non_streaming_transcription_request(request)
 
-    assert calls == [300, 300, 50]
+    assert calls == [([300, 300, 50], {"language": None, "timestamps": "none"})]
     assert response.text == "A B C"
     assert [segment.start for segment in response.segments] == [0.0, 30.0, 60.0]
     assert [word.start for word in response.words] == [0.0, 30.0, 60.0]

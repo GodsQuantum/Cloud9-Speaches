@@ -128,11 +128,13 @@ def _offset_result(result, offset_ms: int):
 
 def run_qwen_chunked(session, audio, *, sample_rate: int, language, timestamps, max_seconds: float = 30.0):
     max_samples = max(1, int(sample_rate * max_seconds))
-    parts = []
-    for start in range(0, len(audio), max_samples):
-        end = min(len(audio), start + max_samples)
-        result = session.run(audio[start:end], language=language, timestamps=timestamps)
-        parts.append(_offset_result(result, int(round(start * 1000 / sample_rate))))
+    starts = list(range(0, len(audio), max_samples))
+    chunks = [audio[start:min(len(audio), start + max_samples)] for start in starts]
+    results = session.run_batch(chunks, language=language, timestamps=timestamps)
+    parts = [
+        _offset_result(result, int(round(start * 1000 / sample_rate)))
+        for start, result in zip(starts, results, strict=True)
+    ]
     return SimpleNamespace(
         text=" ".join(part.text.strip() for part in parts if part.text.strip()),
         language=next((part.language for part in parts if part.language), None),
