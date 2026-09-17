@@ -71,30 +71,25 @@ class SpeechTimestamp(BaseModel):
 
 
 class SileroVADModelFiles(BaseModel):
-    encoder: Path
-    decoder: Path
+    model: Path | None = None
+    encoder: Path | None = None
+    decoder: Path | None = None
 
 
 class SileroVADModel:
-    def __init__(self, encoder_path: Path, decoder_path: Path, providers: list[tuple[str, dict]]) -> None:
+    def __init__(self, files: SileroVADModelFiles, providers: list[tuple[str, dict]]) -> None:
         import onnxruntime
 
         opts = onnxruntime.SessionOptions()
-        # opts.inter_op_num_threads = 1
-        # opts.intra_op_num_threads = 1
-        # opts.enable_cpu_mem_arena = False
-        # opts.log_severity_level = 4
-
-        self.encoder_session = onnxruntime.InferenceSession(
-            encoder_path,
-            providers=providers,
-            sess_options=opts,
-        )
-        self.decoder_session = onnxruntime.InferenceSession(
-            decoder_path,
-            providers=providers,
-            sess_options=opts,
-        )
+        self.v6_session = None
+        self.encoder_session = None
+        self.decoder_session = None
+        if files.model is not None:
+            self.v6_session = onnxruntime.InferenceSession(files.model, providers=providers, sess_options=opts)
+        else:
+            assert files.encoder is not None and files.decoder is not None
+            self.encoder_session = onnxruntime.InferenceSession(files.encoder, providers=providers, sess_options=opts)
+            self.decoder_session = onnxruntime.InferenceSession(files.decoder, providers=providers, sess_options=opts)
 
     def __call__(
         self, audio: np.ndarray, num_samples: int = 512, context_size_samples: int = 64
@@ -105,11 +100,27 @@ class SileroVADModel:
 
         batch_size = audio.shape[0]
 
+        if self.v6_session is not None:
+            assert batch_size == 1, "Silero VAD v6 currently supports batch size 1"
+            flat_audio = audio.reshape(-1)
+            h = np.zeros((1, 1, 128), dtype=np.float32)
+            c = np.zeros((1, 1, 128), dtype=np.float32)
+            batched_audio = flat_audio.reshape(-1, num_samples)
+            context = batched_audio[..., -context_size_samples:]
+            context[-1] = 0
+            context = np.roll(context, 1, 0)
+            batched_audio = np.concatenate([context, batched_audio], 1)
+            batched_audio = batched_audio.reshape(-1, num_samples + context_size_samples)
+            outputs = []
+            for i in range(0, batched_audio.shape[0], 10000):
+                out, h, c = self.v6_session.run(None, {"input": batched_audio[i : i + 10000], "h": h, "c": c})
+                outputs.append(out)
+            result = np.concatenate(outputs, axis=0).reshape(1, -1)
+            logger.debug(f"VAD model inference took {time.perf_counter() - timelog_start_1:.4f}s")
+            return result
+
         state = np.zeros((2, batch_size, 128), dtype=np.float32)
-        context = np.zeros(
-            (batch_size, context_size_samples),
-            dtype=np.float32,
-        )
+        context = np.zeros((batch_size, context_size_samples), dtype=np.float32)
 
         batched_audio = audio.reshape(batch_size, -1, num_samples)
         context = batched_audio[..., -context_size_samples:]
@@ -156,9 +167,11 @@ class SileroVADModelRegistry(ModelRegistry):
 
     def get_model_files(self, model_id: str) -> SileroVADModelFiles:
         assert model_id == MODEL_ID, f"Only '{MODEL_ID}' model is supported"
-        encoder_path = Path(get_assets_path()) / "silero_encoder_v5.onnx"
-        decoder_path = Path(get_assets_path()) / "silero_decoder_v5.onnx"
-        return SileroVADModelFiles(encoder=encoder_path, decoder=decoder_path)
+        assets = Path(get_assets_path())
+        v6_path = assets / "silero_vad_v6.onnx"
+        if v6_path.exists():
+            return SileroVADModelFiles(model=v6_path)
+        return SileroVADModelFiles(encoder=assets / "silero_encoder_v5.onnx", decoder=assets / "silero_decoder_v5.onnx")
 
 
 silero_vad_model_registry = SileroVADModelRegistry(
@@ -174,7 +187,7 @@ class SileroVADModelManager(BaseModelManager[SileroVADModel]):
     def _load_fn(self, model_id: str) -> SileroVADModel:
         model_files = silero_vad_model_registry.get_model_files(model_id)
         providers = get_ort_providers_with_options(self.ort_opts)
-        return SileroVADModel(model_files.encoder, model_files.decoder, providers)
+        return SileroVADModel(model_files, providers)
 
     @traced()
     def handle_vad_request(self, request: VadRequest, **_kwargs) -> list[SpeechTimestamp]:
