@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+import ctypes
 import gc
 import logging
 import threading
@@ -14,6 +15,20 @@ if TYPE_CHECKING:
     from speaches.config import OrtOptions
 
 logger = logging.getLogger(__name__)
+
+
+def _trim_native_heap() -> None:
+    """Best-effort release of free glibc arenas after unloading large models."""
+    try:
+        libc = ctypes.CDLL(None)
+        malloc_trim = getattr(libc, "malloc_trim", None)
+        if malloc_trim is None:
+            return
+        malloc_trim.argtypes = [ctypes.c_size_t]
+        malloc_trim.restype = ctypes.c_int
+        malloc_trim(0)
+    except (AttributeError, OSError):
+        logger.debug("Native heap trim is unavailable on this platform")
 
 
 def get_ort_providers_with_options(ort_opts: OrtOptions) -> list[tuple[str, dict]]:
@@ -62,6 +77,7 @@ class SelfDisposingModel[T]:
                 self.expire_timer.cancel()
             self.model = None
             gc.collect()
+            _trim_native_heap()
             logger.info(f"Model {self.model_id} unloaded")
             if self.model_unloaded_callback is not None:
                 self.model_unloaded_callback(self.model_id)

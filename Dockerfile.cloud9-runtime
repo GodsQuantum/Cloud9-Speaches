@@ -10,6 +10,7 @@ COPY cloud9-artifacts/transcribe/lib/ /opt/transcribe/lib/
 COPY cloud9-artifacts/transcribe/python/transcribe_cpp/ /opt/transcribe-python/transcribe_cpp/
 COPY src/speaches/executors/transcribe_cpp.py /home/ubuntu/speaches/src/speaches/executors/transcribe_cpp.py
 COPY src/speaches/executors/shared/registry.py /home/ubuntu/speaches/src/speaches/executors/shared/registry.py
+COPY src/speaches/executors/shared/base_model_manager.py /home/ubuntu/speaches/src/speaches/executors/shared/base_model_manager.py
 COPY src/speaches/routers/stt.py /home/ubuntu/speaches/src/speaches/routers/stt.py
 COPY src/speaches/routers/diarization.py /home/ubuntu/speaches/src/speaches/routers/diarization.py
 
