@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from speaches.config import (
         WhisperConfig,
     )
+    from speaches.executors.silero_vad_v5 import MergedSegment
     from speaches.routers.stt import ResponseFormat
 
 
@@ -49,7 +50,7 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-def _clip_timestamps_seconds(segments: list[dict]) -> list[dict[str, float]]:
+def _clip_timestamps_seconds(segments: list[MergedSegment]) -> list[dict[str, float]]:
     """Convert Speaches VAD sample offsets to faster-whisper >=1.2 clip timestamps."""
     return [{"start": segment["start"] / SAMPLE_RATE, "end": segment["end"] / SAMPLE_RATE} for segment in segments]
 

@@ -130,6 +130,9 @@ class SileroVADModel:
 
         batched_audio = batched_audio.reshape(-1, num_samples + context_size_samples)
 
+        assert self.encoder_session is not None
+        assert self.decoder_session is not None
+
         encoder_batch_size = 10000
         num_segments = batched_audio.shape[0]
         encoder_outputs = []

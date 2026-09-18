@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import huggingface_hub
 
@@ -162,13 +162,13 @@ class TranscribeCppDiarizationModelManager(BaseModelManager):
         self.backend = backend
 
     def _load_fn(self, model_id: str) -> Any:
-        import transcribe_cpp
+        import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         model_path = transcribe_cpp_diarization_model_registry.get_model_files(model_id)
         return transcribe_cpp.Model(str(model_path), backend=self.backend)
 
     def diarize(self, model_id: str, audio: Audio) -> Any:
-        import transcribe_cpp
+        import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         with self.load_model(model_id) as model:
             family = transcribe_cpp.SortformerStreamOptions(preset="very_high_latency")
@@ -182,7 +182,7 @@ class TranscribeCppModelManager(BaseModelManager):
         self.backend = backend
 
     def _load_fn(self, model_id: str) -> Any:
-        import transcribe_cpp
+        import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         model_path = transcribe_cpp_model_registry.get_model_files(model_id)
         return transcribe_cpp.Model(str(model_path), backend=self.backend)
@@ -215,12 +215,15 @@ class TranscribeCppModelManager(BaseModelManager):
         self, request: TranscriptionRequest, **_kwargs
     ) -> Generator[StreamingTranscriptionEvent]:
         import openai.types.audio
-        import transcribe_cpp
+        import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         with self.load_model(request.model) as model:
             if not getattr(model.capabilities, "supports_streaming", False):
-                response = self.handle_non_streaming_transcription_request(
-                    request.model_copy(update={"stream": False, "response_format": "json"})
+                response = cast(
+                    "openai.types.audio.Transcription",
+                    self.handle_non_streaming_transcription_request(
+                        request.model_copy(update={"stream": False, "response_format": "json"})
+                    ),
                 )
                 text = response.text
                 yield openai.types.audio.TranscriptionTextDeltaEvent(

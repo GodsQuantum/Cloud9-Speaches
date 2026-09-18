@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from pyannote.core.segment import Segment
     from pyannote.core.utils.types import TrackName
 
+    from speaches.executors.transcribe_cpp import TranscribeCppDiarizationModelManager
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -129,7 +131,8 @@ def diarize_audio(
     if executor.name == "transcribe.cpp-diarization":
         if known_speakers:
             raise HTTPException(status_code=400, detail="Known-speaker matching is not supported by Sortformer")
-        result = executor.model_manager.diarize(model, audio)
+        model_manager = cast("TranscribeCppDiarizationModelManager", executor.model_manager)
+        result = model_manager.diarize(model, audio)
         segments = [
             DiarizationSegment(
                 start=segment.t0_ms / 1000,

@@ -1,5 +1,10 @@
+from typing import TYPE_CHECKING, cast
+
 from speaches.config import Config
 from speaches.executors.shared.registry import ExecutorRegistry
+
+if TYPE_CHECKING:
+    import openai.types.audio
 
 
 def test_executor_registry_exposes_transcribe_cpp_for_transcription() -> None:
@@ -78,7 +83,10 @@ def test_transcribe_result_maps_to_openai_verbose_json() -> None:
         ),
     )
 
-    response = transcribe_cpp.transcribe_result_to_response(result, "verbose_json", duration=1.0)
+    response = cast(
+        "openai.types.audio.TranscriptionVerbose",
+        transcribe_cpp.transcribe_result_to_response(result, "verbose_json", duration=1.0),
+    )
 
     assert response.text == "Bonjour le monde"
     assert response.language == "fr-FR"
@@ -147,7 +155,9 @@ def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> 
         without_timestamps=False,
     )
 
-    response = manager.handle_non_streaming_transcription_request(request)
+    response = cast(
+        "openai.types.audio.TranscriptionVerbose", manager.handle_non_streaming_transcription_request(request)
+    )
 
     assert response.text == "Bonjour"
     assert calls[0][0] == 16000
@@ -161,7 +171,10 @@ def test_verbose_json_can_use_resolved_language_when_runtime_omits_it() -> None:
     from speaches.executors import transcribe_cpp
 
     result = SimpleNamespace(text="Bonjour", language=None, segments=(), words=())
-    response = transcribe_cpp.transcribe_result_to_response(result, "verbose_json", duration=1.0, language="fr-FR")
+    response = cast(
+        "openai.types.audio.TranscriptionVerbose",
+        transcribe_cpp.transcribe_result_to_response(result, "verbose_json", duration=1.0, language="fr-FR"),
+    )
     assert response.language == "fr-FR"
 
 
@@ -217,7 +230,9 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
         vad_options=VadOptions(),
         without_timestamps=False,
     )
-    response = manager.handle_non_streaming_transcription_request(request)
+    response = cast(
+        "openai.types.audio.TranscriptionVerbose", manager.handle_non_streaming_transcription_request(request)
+    )
 
     assert calls == [([300, 300, 50], {"language": None, "timestamps": "none"})]
     assert response.text == "A B C"
@@ -306,10 +321,12 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
         without_timestamps=True,
     )
     events = list(manager.handle_streaming_transcription_request(request))
+    delta_events = [cast("openai.types.audio.TranscriptionTextDeltaEvent", event) for event in events[:-1]]
+    done_event = cast("openai.types.audio.TranscriptionTextDoneEvent", events[-1])
 
     assert feeds == [17920, 17920, 4160]
-    assert [event.delta for event in events[:-1]] == ["Bon", "jour ", "monde"]
-    assert events[-1].text == "Bonjour monde"
+    assert [event.delta for event in delta_events] == ["Bon", "jour ", "monde"]
+    assert done_event.text == "Bonjour monde"
     assert stream_kwargs["language"] == "fr-FR"
     assert stream_kwargs["timestamps"] == "segment"
     assert stream_kwargs["family"].att_context_right == 6
