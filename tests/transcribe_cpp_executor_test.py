@@ -90,6 +90,8 @@ def test_transcribe_result_maps_to_openai_verbose_json() -> None:
 
     assert response.text == "Bonjour le monde"
     assert response.language == "fr-FR"
+    assert response.segments is not None
+    assert response.words is not None
     assert response.segments[0].start == 0.1
     assert response.segments[0].end == 0.9
     assert [word.word for word in response.words] == ["Bonjour", "le", "monde"]
@@ -236,6 +238,8 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
 
     assert calls == [([300, 300, 50], {"language": None, "timestamps": "none"})]
     assert response.text == "A B C"
+    assert response.segments is not None
+    assert response.words is not None
     assert [segment.start for segment in response.segments] == [0.0, 30.0, 60.0]
     assert [word.start for word in response.words] == [0.0, 30.0, 60.0]
     assert response.language == "fr"
