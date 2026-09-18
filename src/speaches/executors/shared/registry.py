@@ -51,7 +51,7 @@ class ExecutorRegistry:
         )
         self._transcribe_cpp_executor = Executor(
             name="transcribe.cpp",
-            model_manager=TranscribeCppModelManager(config.stt_model_ttl),
+            model_manager=TranscribeCppModelManager(config.stt_model_ttl, backend=config.transcribe_backend),
             model_registry=transcribe_cpp_model_registry,
             task="automatic-speech-recognition",
         )
@@ -85,7 +85,7 @@ class ExecutorRegistry:
         )
         self._transcribe_cpp_diarization_executor = Executor(
             name="transcribe.cpp-diarization",
-            model_manager=TranscribeCppDiarizationModelManager(config.stt_model_ttl),
+            model_manager=TranscribeCppDiarizationModelManager(config.stt_model_ttl, backend=config.transcribe_backend),
             model_registry=transcribe_cpp_diarization_model_registry,
             task="speaker-diarization",
         )

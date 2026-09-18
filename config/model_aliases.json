@@ -1,9 +1,10 @@
 {
   "whisper-1": "deepdml/faster-whisper-large-v3-turbo-ct2",
   "stt-fast": "handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf",
+  "stt-balanced": "handy-computer/Qwen3-ASR-0.6B-gguf",
   "stt-quality": "handy-computer/Qwen3-ASR-1.7B-gguf",
   "stt-whisper": "deepdml/faster-whisper-large-v3-turbo-ct2",
-  "stt-draft": "Systran/faster-whisper-small",
+  "stt-europe": "handy-computer/parakeet-tdt-0.6b-v3-gguf",
   "fr-fast": "handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf",
   "fr-quality": "handy-computer/Qwen3-ASR-1.7B-gguf",
   "tts-fast": "speaches-ai/piper-fr_FR-tom-medium",

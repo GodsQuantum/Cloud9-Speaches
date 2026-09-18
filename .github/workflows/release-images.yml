@@ -1,0 +1,74 @@
+name: release-images
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify Reloaded release contract
+        run: python tests/reloaded_release_test.py
+
+  docker:
+    needs: contract
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: cpu
+            backend: cpu
+            base_image: ubuntu:24.04
+            builder_image: ubuntu:24.04
+            platforms: linux/amd64,linux/arm64
+          - profile: vulkan
+            backend: vulkan
+            base_image: ubuntu:24.04
+            builder_image: ubuntu:24.04
+            platforms: linux/amd64,linux/arm64
+          - profile: cuda
+            backend: cuda
+            base_image: nvidia/cuda:12.9.0-base-ubuntu24.04
+            builder_image: nvidia/cuda:12.9.0-devel-ubuntu24.04
+            platforms: linux/amd64
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/godsquantum/speaches-reloaded
+          tags: |
+            type=raw,value=latest-${{ matrix.profile }},enable={{is_default_branch}}
+            type=ref,event=tag,suffix=-${{ matrix.profile }}
+            type=sha,suffix=-${{ matrix.profile }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.reloaded
+          push: true
+          platforms: ${{ matrix.platforms }}
+          build-args: |
+            BASE_IMAGE=${{ matrix.base_image }}
+            TRANSCRIBE_BUILDER_IMAGE=${{ matrix.builder_image }}
+            TRANSCRIBE_BACKEND=${{ matrix.backend }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.profile }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.profile }}

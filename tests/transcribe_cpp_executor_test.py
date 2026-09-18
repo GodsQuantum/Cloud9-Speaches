@@ -9,6 +9,16 @@ def test_executor_registry_exposes_transcribe_cpp_for_transcription() -> None:
     assert "transcribe.cpp" in names
 
 
+def test_transcribe_backend_is_configurable_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv("TRANSCRIBE_BACKEND", "cuda")
+    config = Config()
+    registry = ExecutorRegistry(config)
+
+    assert config.transcribe_backend == "cuda"
+    assert registry._transcribe_cpp_executor.model_manager.backend == "cuda"
+    assert registry._transcribe_cpp_diarization_executor.model_manager.backend == "cuda"
+
+
 def test_transcribe_registry_prefers_q8_0(monkeypatch, tmp_path) -> None:
     from speaches.executors import transcribe_cpp
 

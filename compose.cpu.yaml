@@ -1,15 +1,14 @@
-# include:
-#   - compose.observability.yaml
 services:
   speaches:
     extends:
       file: compose.yaml
       service: speaches
-    image: ghcr.io/speaches-ai/speaches:latest-cpu
-    build:
-      args:
-        BASE_IMAGE: ubuntu:24.04
-    volumes:
-      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+    image: ghcr.io/godsquantum/speaches-reloaded:latest-cpu
+    environment:
+      TRANSCRIBE_BACKEND: cpu
+      WHISPER__INFERENCE_DEVICE: cpu
+      WHISPER__COMPUTE_TYPE: "${WHISPER_COMPUTE_TYPE:-int8}"
+      WHISPER__CPU_THREADS: "${WHISPER_CPU_THREADS:-0}"
+
 volumes:
-  hf-hub-cache:
+  speaches-models:

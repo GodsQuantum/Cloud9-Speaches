@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 type Device = Literal["cpu", "cuda", "auto"]
+type TranscribeBackend = Literal["auto", "cpu", "vulkan", "cuda"]
 
 # https://github.com/OpenNMT/CTranslate2/blob/master/docs/quantization.md#quantize-on-model-conversion
 type Quantization = Literal[
@@ -98,6 +99,8 @@ class Config(BaseSettings):
     """
 
     whisper: WhisperConfig = WhisperConfig()
+    transcribe_backend: TranscribeBackend = "auto"
+    """Backend used by the transcribe.cpp executor."""
 
     # TODO: remove the underscore prefix from the field name
     _unstable_vad_filter: bool = True

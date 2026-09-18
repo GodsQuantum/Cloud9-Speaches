@@ -1,17 +1,33 @@
-# Architecture
+# Speaches Reloaded architecture
 
-Speaches Extended keeps the OpenAI-compatible Speaches API and adds a second STT execution path backed by `transcribe.cpp`.
+Speaches Reloaded keeps Speaches as the OpenAI-compatible API, UI and model-lifecycle layer. It adds transcribe.cpp as a second STT executor instead of replacing the existing faster-whisper, Kokoro or Piper paths.
 
-## STT
-- `faster-whisper`: compatibility fallback and Whisper-family production path.
-- `transcribe.cpp` + Vulkan: GGUF models, AMD/Intel/NVIDIA Vulkan, streaming-capable model families, low dependency overhead.
-- Dynamic model loading/offloading remains managed by Speaches.
-- The same `/v1/audio/transcriptions` endpoint selects the backend from the requested model ID.
+## Runtime paths
 
-## TTS
-- Kokoro ONNX: default quality/size balance.
-- Piper: default low-latency/lightweight path.
-- Heavier cloning/expressive engines such as Qwen3-TTS or Chatterbox are intentionally not bundled in the base image because they require a much larger PyTorch/ROCm/CUDA stack. They are candidates for optional workers/profiles, not base dependencies.
+~~~text
+                        ┌─ faster-whisper ── Whisper STT
+OpenAI-compatible API ──┼─ transcribe.cpp ── GGUF STT / streaming / diarization
+                        ├─ Kokoro ────────── TTS
+                        └─ Piper ─────────── TTS
+~~~
 
-## Model distribution
-Models are not committed to Git. `scripts/preload-models.sh` fills the persistent Hugging Face cache. This gives a reproducible plug-and-play deployment without forcing every image pull to include many gigabytes of model weights.
+The requested model determines the executor. Dynamic model loading and TTL-based unloading remain controlled by Speaches.
+
+## Hardware profiles
+
+- **CPU**: transcribe.cpp CPU + faster-whisper CPU.
+- **Vulkan**: transcribe.cpp Vulkan on AMD or Intel; faster-whisper stays on CPU.
+- **CUDA**: transcribe.cpp CUDA + faster-whisper CUDA on NVIDIA.
+## Image design
+
+All three release images use the same application source and pinned transcribe.cpp revision. Only the native backend and runtime base change. AMD and Intel share Vulkan because splitting them would duplicate the same backend and Mesa runtime.
+
+Model weights are deliberately outside OCI images. The persistent Hugging Face cache survives upgrades, while scripts/models.sh provides lean, recommended and full download presets.
+
+## Why heavy TTS engines are not bundled
+
+Qwen3-TTS and Chatterbox add useful cloning and expressive features, but also add a large PyTorch/CUDA/ROCm dependency stack. Reloaded keeps the base speech server small and predictable; those engines belong in optional workers only when there is a concrete integration requirement.
+
+## Upstream relationship
+
+The repository retains Speaches Git history. Reloaded-specific commits stay above the pinned upstream base so upstream changes can be reviewed and rebased instead of copied into an unrelated codebase.

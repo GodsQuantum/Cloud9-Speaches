@@ -1,28 +1,28 @@
 services:
   speaches:
+    image: ghcr.io/godsquantum/speaches-reloaded:latest-cpu
     container_name: speaches
-    build:
-      dockerfile: Dockerfile
-      context: .
-      platforms:
-        - linux/amd64
-        - linux/arm64
     restart: unless-stopped
     ports:
-      - 8000:8000
-    develop:
-      watch:
-        - action: rebuild
-          path: ./uv.lock
-        - action: sync+restart
-          path: ./src
-          target: /home/ubuntu/speaches/src
+      - "${SPEACHES_PORT:-8000}:8000"
     env_file:
       - path: .env
         required: false
+    environment:
+      ENABLE_UI: "${ENABLE_UI:-true}"
+      STT_MODEL_TTL: "${STT_MODEL_TTL:-120}"
+      TTS_MODEL_TTL: "${TTS_MODEL_TTL:-60}"
+      VAD_MODEL_TTL: "${VAD_MODEL_TTL:-300}"
+      PRELOAD_MODELS: "${PRELOAD_MODELS:-[]}"
+    volumes:
+      - speaches-models:/home/ubuntu/.cache/huggingface
+      - ./config/model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8000/health"] # TODO: won't work if a user changes the port
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 20s
+
+volumes:
+  speaches-models:
