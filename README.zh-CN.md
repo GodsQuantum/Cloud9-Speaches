@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.svg" width="138" alt="Speaches Reloaded 标志">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded 标志">
 </p>
 
 <h1 align="center">Speaches Reloaded</h1>
@@ -38,6 +38,8 @@
 | NVIDIA GPU | ghcr.io/godsquantum/speaches-reloaded:latest-cuda | compose.cuda.yaml |
 
 AMD 与 Intel 共用 Vulkan 镜像，因为两者使用相同的推理后端，无需维护重复镜像。
+
+**即使机器装有 GPU，也始终可以只使用 CPU。** 如果希望完全释放 GPU，可在任何 x86-64 主机上直接使用 `compose.cpu.yaml`。已运行 Vulkan 镜像时，可设置 `TRANSCRIBE_BACKEND=cpu`；CUDA 镜像还可同时设置 `WHISPER_DEVICE=cpu`。如果希望 Docker 完全不映射或保留 GPU，CPU Compose 是最干净的选择。
 
 ## 🚀 安装
 

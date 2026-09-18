@@ -311,7 +311,7 @@ async def handle_completions(
                 "Double-check your API key for typos or expiration.",
                 "Ensure the endpoint URL matches your Speaches server configuration.",
                 "Test your internet connection.",
-                "If the error persists, visit https://github.com/speaches-ai/speaches/issues or contact support with the error ID.",
+                "If the error persists, visit https://github.com/GodsQuantum/Speaches-Reloaded/issues or contact support with the error ID.",
             ],
             debug=error_info,
         ) from e
@@ -332,7 +332,7 @@ async def handle_completions(
             hint="Try again or contact support with the error details.",
             suggestions=[
                 "Retry your request.",
-                "If the error persists, visit https://github.com/speaches-ai/speaches/issues or contact support and provide the debug information.",
+                "If the error persists, visit https://github.com/GodsQuantum/Speaches-Reloaded/issues or contact support and provide the debug information.",
             ],
             debug=error_info,
         ) from e

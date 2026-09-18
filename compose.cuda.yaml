@@ -5,8 +5,8 @@ services:
       service: speaches
     image: ghcr.io/godsquantum/speaches-reloaded:latest-cuda
     environment:
-      TRANSCRIBE_BACKEND: cuda
-      WHISPER__INFERENCE_DEVICE: cuda
+      TRANSCRIBE_BACKEND: "${TRANSCRIBE_BACKEND:-cuda}"
+      WHISPER__INFERENCE_DEVICE: "${WHISPER_DEVICE:-cuda}"
       WHISPER__COMPUTE_TYPE: "${WHISPER_COMPUTE_TYPE:-float16}"
       NVIDIA_VISIBLE_DEVICES: "${NVIDIA_VISIBLE_DEVICES:-all}"
       NVIDIA_DRIVER_CAPABILITIES: "${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}"

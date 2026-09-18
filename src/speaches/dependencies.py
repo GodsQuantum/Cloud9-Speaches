@@ -115,7 +115,7 @@ def audio_file_dependency(
         ) from e
     except Exception as e:
         logger.exception(
-            "Failed to decode audio. This is likely a bug. Please create an issue at https://github.com/speaches-ai/speaches/issues/new."
+            "Failed to decode audio. This is likely a bug. Please create an issue at https://github.com/GodsQuantum/Speaches-Reloaded/issues/new."
         )
         raise HTTPException(status_code=500, detail="Failed to decode audio.") from e
 

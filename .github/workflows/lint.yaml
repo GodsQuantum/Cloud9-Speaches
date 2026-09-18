@@ -3,21 +3,26 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
     paths:
       - "src/**"
       - "scripts/**"
       - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/lint.yaml"
   pull_request:
     paths:
       - "src/**"
       - "scripts/**"
       - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/lint.yaml"
+
 jobs:
-  ruff:
-    runs-on: ubuntu-24.04-4core-x86
+  lint:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
@@ -28,14 +33,4 @@ jobs:
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run ruff format --check --diff .
-  python-type-check-pyrefly:
-    runs-on: ubuntu-24.04-4core-x86
-    steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          activate-environment: true
-      - run: uv python install
-      - run: uv sync
       - run: uv run pyrefly check

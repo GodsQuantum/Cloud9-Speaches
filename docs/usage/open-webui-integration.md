@@ -29,6 +29,6 @@ services:
       AUDIO_STT_OPENAI_API_KEY: "does-not-matter-what-you-put-but-should-not-be-empty"
       AUDIO_STT_MODEL: "Systran/faster-distil-whisper-large-v3"
   speaches:
-    image: ghcr.io/speaches-ai/speaches:latest-cuda
+    image: ghcr.io/godsquantum/speaches-reloaded:latest-cuda
     ...
 ```

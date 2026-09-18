@@ -10,7 +10,7 @@ from speaches.ui.tabs.tts import create_tts_tab
 
 def create_gradio_demo(config: Config) -> gr.Blocks:
     with gr.Blocks(
-        title="Speaches Playground",
+        title="Speaches Reloaded",
         head="""
 <script>
     const API_KEY_STORAGE_KEY = 'speaches_api_key';
@@ -34,14 +34,14 @@ def create_gradio_demo(config: Config) -> gr.Blocks:
 </script>
 """,
     ) as demo:
-        gr.Markdown("# Speaches Playground")
+        gr.Markdown("# Speaches Reloaded")
         gr.Markdown(
-            "### Consider supporting the project by starring the [speaches-ai/speaches repository on GitHub](https://github.com/speaches-ai/speaches)."
+            "### Using Speaches Reloaded? Star the [GodsQuantum/Speaches-Reloaded repository on GitHub](https://github.com/GodsQuantum/Speaches-Reloaded). Original Speaches credits remain in the project documentation."
         )
-        gr.Markdown("### Documentation Website: https://speaches.ai")
         gr.Markdown(
-            "### For additional details regarding the parameters, see the [API Documentation](https://speaches.ai/api)"
+            "### Documentation: [Speaches Reloaded on GitHub](https://github.com/GodsQuantum/Speaches-Reloaded/tree/main/docs)"
         )
+        gr.Markdown("### API schema and interactive reference: [local /docs](/docs)")
 
         with gr.Row():
             with gr.Column(scale=9):

@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 # https://www.mkdocs.org/user-guide/configuration/#configuration
-site_name: Speaches Documentation
-site_url: https://speaches.ai
+site_name: Speaches Reloaded Documentation
+site_url: https://godsquantum.github.io/Speaches-Reloaded/
 dev_addr: 127.0.0.1:8001
-repo_url: https://github.com/speaches-ai/speaches/
-edit_uri: edit/master/docs/
+repo_url: https://github.com/GodsQuantum/Speaches-Reloaded/
+edit_uri: edit/main/docs/
 docs_dir: docs
 theme:
   language: en

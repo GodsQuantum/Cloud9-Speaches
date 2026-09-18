@@ -16,7 +16,7 @@ services:
       PRELOAD_MODELS: "${PRELOAD_MODELS:-[]}"
     volumes:
       - speaches-models:/home/ubuntu/.cache/huggingface
-      - ./config/model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
+      - ./model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
       interval: 30s

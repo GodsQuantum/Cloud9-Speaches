@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.svg" width="138" alt="Logo Speaches Reloaded">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Speaches Reloaded">
 </p>
 
 <h1 align="center">Speaches Reloaded</h1>
@@ -38,6 +38,8 @@
 | NVIDIA GPU | ghcr.io/godsquantum/speaches-reloaded:latest-cuda | compose.cuda.yaml |
 
 AMD et Intel partagent volontairement Vulkan : deux images séparées n'apporteraient aucun moteur supplémentaire.
+
+**Le CPU reste toujours utilisable, même si la machine possède un GPU.** Utilise `compose.cpu.yaml` sur n'importe quelle machine x86-64 si tu veux libérer complètement le GPU. Avec l'image Vulkan déjà déployée, `TRANSCRIBE_BACKEND=cpu` bascule transcribe.cpp sur le CPU. Avec l'image CUDA, mets aussi `WHISPER_DEVICE=cpu`. Pour que Docker ne réserve même plus le GPU, le profil CPU reste le choix le plus propre.
 
 ## 🚀 Installation
 

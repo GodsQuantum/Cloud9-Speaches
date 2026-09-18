@@ -60,7 +60,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.reloaded
+          file: Dockerfile
           push: true
           platforms: ${{ matrix.platforms }}
           build-args: |

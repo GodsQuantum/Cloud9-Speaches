@@ -1,127 +1,57 @@
-!!! warning
+# Installation
 
-    Additional steps are required to use the text-to-speech feature. Please see the [Text-to-Speech](./usage/text-to-speech.md).
+Speaches Reloaded publishes three Linux x86-64 images:
 
-## Docker Compose (Recommended)
+| Hardware / choice | Image | Compose |
+|---|---|---|
+| CPU on any machine | `ghcr.io/godsquantum/speaches-reloaded:latest-cpu` | `compose.cpu.yaml` |
+| AMD / Intel GPU | `ghcr.io/godsquantum/speaches-reloaded:latest-vulkan` | `compose.vulkan.yaml` |
+| NVIDIA GPU | `ghcr.io/godsquantum/speaches-reloaded:latest-cuda` | `compose.cuda.yaml` |
 
-!!! note
+## Common setup
 
-    I'm using newer Docker Compose features. If you are using an older version of Docker Compose, you may need need to update.
+~~~bash
+git clone https://github.com/GodsQuantum/Speaches-Reloaded.git
+cd Speaches-Reloaded
+cp .env.example .env
+~~~
 
-Download the necessary Docker Compose files
+## CPU
 
-=== "CUDA"
+CPU works on any supported machine, including hosts that also have a GPU.
 
-    ```bash
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.yaml
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.cuda.yaml
-    export COMPOSE_FILE=compose.cuda.yaml
-    ```
+~~~bash
+docker compose -f compose.cpu.yaml up -d
+~~~
 
-=== "CUDA (with CDI feature enabled)"
+Use this profile when you want the GPU completely free.
 
-    ```bash
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.yaml
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.cuda.yaml
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.cuda-cdi.yaml
-    export COMPOSE_FILE=compose.cuda-cdi.yaml
-    ```
+## AMD / Intel Vulkan
 
-=== "CPU"
+~~~bash
+RENDER_GID="$(stat -c '%g' /dev/dri/renderD128)"
+sed -i "s/^RENDER_GID=.*/RENDER_GID=$RENDER_GID/" .env
+docker compose -f compose.vulkan.yaml up -d
+~~~
 
-    ```bash
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.yaml
-    curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.cpu.yaml
-    export COMPOSE_FILE=compose.cpu.yaml
-    ```
+To keep the Vulkan image but move transcribe.cpp to CPU, set `TRANSCRIBE_BACKEND=cpu`. The CPU Compose is still preferable when you do not want the GPU device mapped at all.
 
-Start the service
+## NVIDIA CUDA
 
-```bash
-docker compose up --detach
-```
+Install NVIDIA Container Toolkit on the host, then:
 
-??? note "Build from source"
+~~~bash
+docker compose -f compose.cuda.yaml up -d
+~~~
 
-    ```bash
-    # NOTE: you need to install and enable [buildx](https://github.com/docker/buildx) for multi-platform builds
+Set `TRANSCRIBE_BACKEND=cpu` and `WHISPER_DEVICE=cpu` to run inference on CPU while keeping the CUDA image. Use the CPU Compose if you want Docker to stop reserving the GPU entirely.
 
-    # Download the source code
-    git clone https://github.com/speaches-ai/speaches.git
-    cd speaches
+## Models
 
-    # Build image with CUDA support
-    docker compose --file compose.cuda.yaml build
+After the container is running:
 
-    # Build image without CUDA support
-    docker compose --file compose.cpu.yaml build
-    ```
+~~~bash
+./scripts/models.sh
+~~~
 
-## Docker
-
-=== "CUDA"
-
-    ```bash
-    docker run \
-      --rm \
-      --detach \
-      --publish 8000:8000 \
-      --name speaches \
-      --volume hf-hub-cache:/home/ubuntu/.cache/huggingface/hub \
-      --gpus=all \
-      ghcr.io/speaches-ai/speaches:latest-cuda
-    ```
-
-=== "CUDA (with CDI feature enabled)"
-
-    ```bash
-    docker run \
-      --rm \
-      --detach \
-      --publish 8000:8000 \
-      --name speaches \
-      --volume hf-hub-cache:/home/ubuntu/.cache/huggingface/hub \
-      --device=nvidia.com/gpu=all \
-      ghcr.io/speaches-ai/speaches:latest-cuda
-    ```
-
-=== "CPU"
-
-    ```bash
-    docker run \
-      --rm \
-      --detach \
-      --publish 8000:8000 \
-      --name speaches \
-      --volume hf-hub-cache:/home/ubuntu/.cache/huggingface/hub \
-      ghcr.io/speaches-ai/speaches:latest-cpu
-    ```
-
-??? note "Build from source"
-
-    ```bash
-    # Download the source code
-    git clone https://github.com/speaches-ai/speaches.git
-    cd speaches
-
-    docker build --tag speaches .
-
-    # NOTE: you need to install and enable [buildx](https://github.com/docker/buildx) for multi-platform builds
-    # Build image for both amd64 and arm64
-    docker buildx build --tag speaches --platform linux/amd64,linux/arm64 .
-
-    # Build image without CUDA support
-    docker build --tag speaches --build-arg BASE_IMAGE=ubuntu:24.04 .
-    ```
-
-## Python (requires `uv` package manager)
-
-```bash
-git clone https://github.com/speaches-ai/speaches.git
-cd speaches
-uv python install
-uv venv
-source .venv/bin/activate
-uv sync
-uvicorn --factory --host 0.0.0.0 speaches.main:create_app
-```
+The helper offers lean, recommended and full model packs. Weights are stored in the persistent Docker model volume and are not baked into the application image.

@@ -5,8 +5,8 @@ services:
       service: speaches
     image: ghcr.io/godsquantum/speaches-reloaded:latest-vulkan
     environment:
-      TRANSCRIBE_BACKEND: vulkan
-      WHISPER__INFERENCE_DEVICE: cpu
+      TRANSCRIBE_BACKEND: "${TRANSCRIBE_BACKEND:-vulkan}"
+      WHISPER__INFERENCE_DEVICE: "${WHISPER_DEVICE:-cpu}"
       WHISPER__COMPUTE_TYPE: "${WHISPER_COMPUTE_TYPE:-int8}"
       WHISPER__CPU_THREADS: "${WHISPER_CPU_THREADS:-0}"
     devices:

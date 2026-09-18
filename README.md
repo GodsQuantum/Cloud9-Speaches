@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.svg" width="138" alt="Speaches Reloaded logo">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded logo">
 </p>
 
 <h1 align="center">Speaches Reloaded</h1>
@@ -45,6 +45,8 @@ The goal is simple: clone the repo, choose the Compose file matching the hardwar
 | NVIDIA GPU | ghcr.io/godsquantum/speaches-reloaded:latest-cuda | compose.cuda.yaml | transcribe.cpp CUDA + faster-whisper CUDA |
 
 AMD and Intel intentionally share one Vulkan image. Maintaining separate images would add duplication without changing the inference backend.
+
+**CPU is always an option, even when a GPU is installed.** Use `compose.cpu.yaml` on any x86-64 machine when you want the GPU completely free. If you already run the Vulkan image, set `TRANSCRIBE_BACKEND=cpu` to move transcribe.cpp to CPU. With the CUDA image, set both `TRANSCRIBE_BACKEND=cpu` and `WHISPER_DEVICE=cpu`; use the CPU Compose when you want Docker to stop reserving/mapping the GPU entirely.
 ## 🚀 Quick start
 
 Requirements: Docker Engine + Docker Compose v2. NVIDIA users also need the NVIDIA Container Toolkit.
@@ -139,7 +141,7 @@ The Dockerfiles pin the transcribe.cpp revision used for a release. Model weight
 ~~~bash
 python tests/reloaded_release_test.py
 git diff --check
-docker build -f Dockerfile.reloaded --build-arg TRANSCRIBE_BACKEND=cpu -t speaches-reloaded:dev .
+docker build -f Dockerfile --build-arg TRANSCRIBE_BACKEND=cpu -t speaches-reloaded:dev .
 ~~~
 ## Credits & license
 
