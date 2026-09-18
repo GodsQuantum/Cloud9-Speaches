@@ -1,0 +1,33 @@
+services:
+  speaches:
+    build:
+      context: .
+      dockerfile: Dockerfile.vulkan
+    image: ghcr.io/godsquantum/speaches-extended:latest-vulkan
+    container_name: speaches
+    restart: unless-stopped
+    ports:
+      - "${SPEACHES_PORT:-8000}:8000"
+    environment:
+      ENABLE_UI: "true"
+      STT_MODEL_TTL: "${STT_MODEL_TTL:-120}"
+      TTS_MODEL_TTL: "${TTS_MODEL_TTL:-60}"
+      VAD_MODEL_TTL: "${VAD_MODEL_TTL:-300}"
+      WHISPER__INFERENCE_DEVICE: "${WHISPER_DEVICE:-cpu}"
+      WHISPER__COMPUTE_TYPE: "${WHISPER_COMPUTE_TYPE:-int8}"
+      WHISPER__CPU_THREADS: "${WHISPER_CPU_THREADS:-6}"
+      WHISPER__NUM_WORKERS: "${WHISPER_NUM_WORKERS:-1}"
+      PRELOAD_MODELS: "${PRELOAD_MODELS:-[]}"
+      TRANSCRIBE_BACKEND: "${TRANSCRIBE_BACKEND:-vulkan}"
+    volumes:
+      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+      - ./config/model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
+    devices:
+      - "${DRI_RENDER_DEVICE:-/dev/dri/renderD128}:${DRI_RENDER_DEVICE:-/dev/dri/renderD128}"
+    group_add:
+      - "${RENDER_GID:-109}"
+    mem_limit: "${MEM_LIMIT:-8g}"
+    pids_limit: 512
+
+volumes:
+  hf-hub-cache:

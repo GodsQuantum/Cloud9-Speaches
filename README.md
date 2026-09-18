@@ -1,38 +1,51 @@
-# Speaches
+# Speaches Extended
 
-`speaches` is an OpenAI API-compatible server supporting streaming transcription, translation, and speech generation. Speach-to-Text is powered by [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and for Text-to-Speech [piper](https://github.com/rhasspy/piper) and [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) are used. This project aims to be Ollama, but for TTS/STT models.
+OpenAI-compatible local STT/TTS server based on [Speaches](https://github.com/speaches-ai/speaches), extended with a native `transcribe.cpp` execution path and a portable Vulkan container.
 
-See the documentation for installation instructions and usage: [speaches.ai](https://speaches.ai/)
+> Unofficial community distribution. Not affiliated with the Speaches project.
 
-## Features:
+## Why
 
-- OpenAI API compatible. All tools and SDKs that work with OpenAI's API should work with `speaches`.
-- Audio generation (chat completions endpoint) | [OpenAI Documentation](https://platform.openai.com/docs/guides/realtime)
-  - Generate a spoken audio summary of a body of text (text in, audio out)
-  - Perform sentiment analysis on a recording (audio in, text out)
-  - Async speech to speech interactions with a model (audio in, audio out)
-- Streaming support (transcription is sent via SSE as the audio is transcribed. You don't need to wait for the audio to fully be transcribed before receiving it).
-- Dynamic model loading / offloading. Just specify which model you want to use in the request and it will be loaded automatically. It will then be unloaded after a period of inactivity.
-- Text-to-Speech via `kokoro`(Ranked #1 in the [TTS Arena](https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena)) and `piper` models.
-- GPU and CPU support.
-- [Deployable via Docker Compose / Docker](https://speaches.ai/installation/)
-- [Realtime API](https://speaches.ai/usage/realtime-api)
-- [Highly configurable](https://speaches.ai/configuration/)
+Upstream Speaches is an OpenAI-compatible speech gateway built around faster-whisper, Kokoro and Piper. This distribution keeps that API/UI and adds a second STT engine: `transcribe.cpp`, which exposes many GGUF speech model families through native backends.
 
-Please create an issue if you find a bug, have a question, or a feature suggestion.
+The Vulkan image targets Linux servers with AMD/Intel/NVIDIA graphics where a light native backend is preferable to a full PyTorch/ROCm stack.
 
-## Demos
+## Highlights
 
-### Realtime API
+- OpenAI-compatible transcription, translation, realtime and TTS endpoints.
+- `faster-whisper` and `transcribe.cpp` behind the same API.
+- Vulkan STT acceleration with dynamic model load/offload.
+- Streaming-capable Nemotron/Parakeet-family support.
+- Qwen3-ASR long-audio batching.
+- `transcribe.cpp` Sortformer diarization path.
+- Silero v6 / faster-whisper 1.2 compatibility fixes.
+- Portable multi-stage Docker build with no Cloud9-specific artifacts.
+- Curated aliases for fast/quality French and general STT/TTS use.
+- Optional one-command model preloading.
 
-https://github.com/user-attachments/assets/457a736d-4c29-4b43-984b-05cc4d9995bc
+## Quick start
 
-(Excuse the breathing lol. Didn't have enough time to record a better demo)
+```bash
+cp .env.example .env
+docker compose -f compose.vulkan.yaml up -d --build
+curl http://localhost:8000/health
+```
 
-### Streaming Transcription
+Optional curated model preload:
 
-TODO
+```bash
+./scripts/preload-models.sh
+```
 
-### Speech Generation
+The Hugging Face cache is stored in a Docker volume and survives upgrades.
 
-https://github.com/user-attachments/assets/0021acd9-f480-4bc3-904d-831f54c4d45b
+## Default aliases
+
+| Alias | Model |
+|---|---|
+| `stt-fast` / `fr-fast` | Nemotron 3.5 ASR Streaming 0.6B GGUF |
+| `stt-quality` / `fr-quality` | Qwen3-ASR 1.7B GGUF |
+| `stt-whisper` / `whisper-1` | faster-whisper large-v3-turbo |
+| `stt-draft` | faster-whisper small |
+| `tts-fast` | Piper French Tom |
+| `tts-quality` | Kokoro 82M ONNX int8 |
