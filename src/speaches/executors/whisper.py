@@ -20,7 +20,7 @@ from speaches.executors.shared.handler_protocol import (  # noqa: TC001
     TranslationRequest,
     TranslationResponse,
 )
-from speaches.executors.silero_vad_v5 import SAMPLE_RATE, merge_segments
+from speaches.executors.silero_vad_v5 import merge_segments
 from speaches.hf_utils import (
     HfModelFilter,
     extract_language_list,
@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from speaches.config import (
         WhisperConfig,
     )
-    from speaches.executors.silero_vad_v5 import MergedSegment
     from speaches.routers.stt import ResponseFormat
 
 
@@ -48,11 +47,6 @@ TASK_NAME_TAG = "automatic-speech-recognition"
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
-
-
-def _clip_timestamps_seconds(segments: list[MergedSegment]) -> list[dict[str, float]]:
-    """Convert Speaches VAD sample offsets to faster-whisper >=1.2 clip timestamps."""
-    return [{"start": segment["start"] / SAMPLE_RATE, "end": segment["end"] / SAMPLE_RATE} for segment in segments]
 
 
 hf_model_filter = HfModelFilter(
@@ -161,7 +155,7 @@ class WhisperModelManager(BaseModelManager[WhisperModel]):
         with self.load_model(request.model) as whisper:
             whisper_model = BatchedInferencePipeline(model=whisper)
 
-            clip_timestamps = _clip_timestamps_seconds(merge_segments(request.speech_segments, request.vad_options))
+            clip_timestamps = merge_segments(request.speech_segments, request.vad_options)
             segments, transcription_info = whisper_model.transcribe(
                 request.audio.data,
                 task="transcribe",
@@ -197,7 +191,7 @@ class WhisperModelManager(BaseModelManager[WhisperModel]):
         with self.load_model(request.model) as whisper:
             whisper_model = BatchedInferencePipeline(model=whisper)
 
-            clip_timestamps = _clip_timestamps_seconds(merge_segments(request.speech_segments, request.vad_options))
+            clip_timestamps = merge_segments(request.speech_segments, request.vad_options)
             segments, _transcription_info = whisper_model.transcribe(
                 request.audio.data,
                 task="transcribe",
