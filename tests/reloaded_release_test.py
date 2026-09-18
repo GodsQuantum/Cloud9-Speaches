@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import unittest
 
@@ -64,6 +65,13 @@ class ReloadedReleaseContract(unittest.TestCase):
         text = read("scripts/models.sh")
         self.assertIn("recommended", text.lower())
         self.assertTrue("huggingface" in text.lower() or "model" in text.lower())
+
+    def test_reloaded_aliases_preserve_openai_compatibility(self) -> None:
+        aliases = json.loads(read("model_aliases.json"))
+        self.assertEqual(aliases["tts-1"], "speaches-ai/Kokoro-82M-v1.0-ONNX")
+        self.assertEqual(aliases["tts-1-hd"], "speaches-ai/Kokoro-82M-v1.0-ONNX")
+        for alias in ("whisper-1", "stt-fast", "stt-balanced", "stt-quality", "tts-fast", "tts-quality"):
+            self.assertIn(alias, aliases)
 
     def test_ui_points_to_reloaded_documentation(self) -> None:
         text = read("src/speaches/ui/app.py")

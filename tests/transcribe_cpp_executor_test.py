@@ -255,6 +255,7 @@ def test_timestamp_mode_disables_native_timestamps_for_qwen() -> None:
 
 def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) -> None:
     from contextlib import nullcontext
+    import sys
     from types import SimpleNamespace
 
     import numpy as np
@@ -301,6 +302,11 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
             stream_kwargs.update(kwargs)
             return FakeStream()
 
+    monkeypatch.setitem(
+        sys.modules,
+        "transcribe_cpp",
+        SimpleNamespace(ParakeetStreamOptions=lambda **kwargs: SimpleNamespace(**kwargs)),
+    )
     fake_model = SimpleNamespace(
         arch="parakeet",
         capabilities=SimpleNamespace(languages=("fr-FR",), supports_streaming=True),

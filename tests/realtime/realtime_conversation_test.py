@@ -370,6 +370,7 @@ async def test_realtime_conversation_item_delete_then_retrieve(endpoint: Endpoin
     ]
 
 
+@pytest.mark.requires_openai
 @pytest.mark.asyncio
 async def test_realtime_conversation_item_create_with_previous_item_id(endpoint: EndpointConfig) -> None:
     async with realtime_session_factory(
@@ -513,6 +514,7 @@ async def test_realtime_conversation_item_duplicate_id_replaces_content(endpoint
             print(recording_connection.messages)
 
 
+@pytest.mark.requires_openai
 @pytest.mark.asyncio
 async def test_realtime_conversation_item_create_with_previous_item_id_root(endpoint: EndpointConfig) -> None:
     async with realtime_session_factory(
