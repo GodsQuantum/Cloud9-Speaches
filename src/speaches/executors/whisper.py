@@ -51,10 +51,8 @@ tracer = trace.get_tracer(__name__)
 
 def _clip_timestamps_seconds(segments: list[dict]) -> list[dict[str, float]]:
     """Convert Speaches VAD sample offsets to faster-whisper >=1.2 clip timestamps."""
-    return [
-        {"start": segment["start"] / SAMPLE_RATE, "end": segment["end"] / SAMPLE_RATE}
-        for segment in segments
-    ]
+    return [{"start": segment["start"] / SAMPLE_RATE, "end": segment["end"] / SAMPLE_RATE} for segment in segments]
+
 
 hf_model_filter = HfModelFilter(
     library_name=LIBRARY_NAME,
@@ -162,9 +160,7 @@ class WhisperModelManager(BaseModelManager[WhisperModel]):
         with self.load_model(request.model) as whisper:
             whisper_model = BatchedInferencePipeline(model=whisper)
 
-            clip_timestamps = _clip_timestamps_seconds(
-                merge_segments(request.speech_segments, request.vad_options)
-            )
+            clip_timestamps = _clip_timestamps_seconds(merge_segments(request.speech_segments, request.vad_options))
             segments, transcription_info = whisper_model.transcribe(
                 request.audio.data,
                 task="transcribe",
@@ -200,9 +196,7 @@ class WhisperModelManager(BaseModelManager[WhisperModel]):
         with self.load_model(request.model) as whisper:
             whisper_model = BatchedInferencePipeline(model=whisper)
 
-            clip_timestamps = _clip_timestamps_seconds(
-                merge_segments(request.speech_segments, request.vad_options)
-            )
+            clip_timestamps = _clip_timestamps_seconds(merge_segments(request.speech_segments, request.vad_options))
             segments, _transcription_info = whisper_model.transcribe(
                 request.audio.data,
                 task="transcribe",

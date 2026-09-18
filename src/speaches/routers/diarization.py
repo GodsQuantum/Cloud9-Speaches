@@ -145,9 +145,7 @@ def diarize_audio(
                 for segment in segments
             ]
             return Response(content="\n".join(lines), media_type="text/plain")
-        return JSONResponse(
-            content=DiarizationResponse(duration=float(audio.duration), segments=segments).model_dump()
-        )
+        return JSONResponse(content=DiarizationResponse(duration=float(audio.duration), segments=segments).model_dump())
 
     with executor.model_manager.load_model(model) as pipeline:
         waveform = torch.from_numpy(audio.data).unsqueeze(0).float()

@@ -41,6 +41,7 @@ def test_transcribe_registry_prefers_q8_0(monkeypatch, tmp_path) -> None:
 def test_transcribe_manager_loads_selected_gguf_with_vulkan(monkeypatch, tmp_path) -> None:
     import sys
     from types import SimpleNamespace
+
     from speaches.executors import transcribe_cpp
 
     model_path = tmp_path / "model-Q8_0.gguf"
@@ -63,6 +64,7 @@ def test_transcribe_manager_loads_selected_gguf_with_vulkan(monkeypatch, tmp_pat
 
 def test_transcribe_result_maps_to_openai_verbose_json() -> None:
     from types import SimpleNamespace
+
     from speaches.executors import transcribe_cpp
 
     result = SimpleNamespace(
@@ -87,6 +89,7 @@ def test_transcribe_result_maps_to_openai_verbose_json() -> None:
 
 def test_language_hint_maps_fr_for_nemotron_and_disables_for_qwen() -> None:
     from types import SimpleNamespace
+
     from speaches.executors import transcribe_cpp
 
     caps = SimpleNamespace(languages=("en-US", "fr-FR", "de-DE"))
@@ -102,7 +105,9 @@ def test_language_hint_maps_fr_for_nemotron_and_disables_for_qwen() -> None:
 def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> None:
     from contextlib import nullcontext
     from types import SimpleNamespace
+
     import numpy as np
+
     from speaches.audio import Audio
     from speaches.executors import transcribe_cpp
     from speaches.executors.shared.handler_protocol import TranscriptionRequest
@@ -112,24 +117,34 @@ def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> 
     result = SimpleNamespace(text="Bonjour", language="fr-FR", segments=(), words=())
 
     class FakeSession:
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
         def run(self, pcm, **kwargs):
             calls.append((len(pcm), kwargs))
             return result
 
     fake_model = SimpleNamespace(
-        arch="parakeet", capabilities=SimpleNamespace(languages=("fr-FR",)),
+        arch="parakeet",
+        capabilities=SimpleNamespace(languages=("fr-FR",)),
         session=lambda: FakeSession(),
     )
     manager = transcribe_cpp.TranscribeCppModelManager(ttl=120)
     monkeypatch.setattr(manager, "load_model", lambda _id: nullcontext(fake_model))
     request = TranscriptionRequest(
         audio=Audio(np.zeros(16000, dtype=np.float32), sample_rate=16000),
-        model="owner/model", stream=False, language="fr",
-        response_format="verbose_json", temperature=0.0,
-        timestamp_granularities=["word", "segment"], speech_segments=[],
-        vad_options=VadOptions(), without_timestamps=False,
+        model="owner/model",
+        stream=False,
+        language="fr",
+        response_format="verbose_json",
+        temperature=0.0,
+        timestamp_granularities=["word", "segment"],
+        speech_segments=[],
+        vad_options=VadOptions(),
+        without_timestamps=False,
     )
 
     response = manager.handle_non_streaming_transcription_request(request)
@@ -142,19 +157,20 @@ def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> 
 
 def test_verbose_json_can_use_resolved_language_when_runtime_omits_it() -> None:
     from types import SimpleNamespace
+
     from speaches.executors import transcribe_cpp
 
     result = SimpleNamespace(text="Bonjour", language=None, segments=(), words=())
-    response = transcribe_cpp.transcribe_result_to_response(
-        result, "verbose_json", duration=1.0, language="fr-FR"
-    )
+    response = transcribe_cpp.transcribe_result_to_response(result, "verbose_json", duration=1.0, language="fr-FR")
     assert response.language == "fr-FR"
 
 
 def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> None:
     from contextlib import nullcontext
     from types import SimpleNamespace
+
     import numpy as np
+
     from speaches.audio import Audio
     from speaches.executors import transcribe_cpp
     from speaches.executors.shared.handler_protocol import TranscriptionRequest
@@ -162,14 +178,20 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
 
     calls = []
     outputs = ["A", "B", "C"]
+
     class FakeSession:
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
         def run_batch(self, pcms, **kwargs):
             calls.append(([len(pcm) for pcm in pcms], kwargs))
             return [
                 SimpleNamespace(
-                    text=text, language=None,
+                    text=text,
+                    language=None,
                     segments=(SimpleNamespace(text=text, t0_ms=0, t1_ms=1000),),
                     words=(SimpleNamespace(text=text, t0_ms=0, t1_ms=500),),
                 )
@@ -177,17 +199,23 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
             ]
 
     fake_model = SimpleNamespace(
-        arch="qwen3_asr", capabilities=SimpleNamespace(languages=()),
+        arch="qwen3_asr",
+        capabilities=SimpleNamespace(languages=()),
         session=lambda: FakeSession(),
     )
     manager = transcribe_cpp.TranscribeCppModelManager(ttl=120)
     monkeypatch.setattr(manager, "load_model", lambda _id: nullcontext(fake_model))
     request = TranscriptionRequest(
         audio=Audio(np.zeros(65 * 10, dtype=np.float32), sample_rate=10),
-        model="owner/qwen", stream=False, language="fr",
-        response_format="verbose_json", temperature=0.0,
-        timestamp_granularities=["word", "segment"], speech_segments=[],
-        vad_options=VadOptions(), without_timestamps=False,
+        model="owner/qwen",
+        stream=False,
+        language="fr",
+        response_format="verbose_json",
+        temperature=0.0,
+        timestamp_granularities=["word", "segment"],
+        speech_segments=[],
+        vad_options=VadOptions(),
+        without_timestamps=False,
     )
     response = manager.handle_non_streaming_transcription_request(request)
 
@@ -200,6 +228,7 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
 
 def test_timestamp_mode_disables_native_timestamps_for_qwen() -> None:
     from types import SimpleNamespace
+
     from speaches.executors import transcribe_cpp
 
     qwen = SimpleNamespace(arch="qwen3_asr")
@@ -212,7 +241,9 @@ def test_timestamp_mode_disables_native_timestamps_for_qwen() -> None:
 def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) -> None:
     from contextlib import nullcontext
     from types import SimpleNamespace
+
     import numpy as np
+
     from speaches.audio import Audio
     from speaches.executors import transcribe_cpp
     from speaches.executors.shared.handler_protocol import TranscriptionRequest
@@ -224,21 +255,33 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
     class FakeStream:
         def __init__(self):
             self.step = 0
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
         def feed(self, pcm):
-            feeds.append(len(pcm)); self.step += 1
+            feeds.append(len(pcm))
+            self.step += 1
             return SimpleNamespace(committed_changed=True)
+
         def finalize(self):
             self.step = 3
             return SimpleNamespace(committed_changed=True)
+
         def text(self):
             committed = {1: "Bon", 2: "Bonjour ", 3: "Bonjour monde"}[self.step]
             return SimpleNamespace(committed=committed, tentative="", display=committed)
 
     class FakeSession:
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
         def stream(self, **kwargs):
             stream_kwargs.update(kwargs)
             return FakeStream()
@@ -252,9 +295,15 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
     monkeypatch.setattr(manager, "load_model", lambda _id: nullcontext(fake_model))
     request = TranscriptionRequest(
         audio=Audio(np.zeros(40000, dtype=np.float32), sample_rate=16000),
-        model="owner/nemotron", stream=True, language="fr", response_format="json",
-        temperature=0.0, timestamp_granularities=["segment"], speech_segments=[],
-        vad_options=VadOptions(), without_timestamps=True,
+        model="owner/nemotron",
+        stream=True,
+        language="fr",
+        response_format="json",
+        temperature=0.0,
+        timestamp_granularities=["segment"],
+        speech_segments=[],
+        vad_options=VadOptions(),
+        without_timestamps=True,
     )
     events = list(manager.handle_streaming_transcription_request(request))
 
@@ -276,6 +325,7 @@ def test_executor_registry_exposes_transcribe_cpp_diarization() -> None:
 def test_sortformer_manager_loads_q8_with_vulkan(monkeypatch, tmp_path) -> None:
     import sys
     from types import SimpleNamespace
+
     from speaches.executors import transcribe_cpp
 
     model_path = tmp_path / "sortformer-Q8_0.gguf"
