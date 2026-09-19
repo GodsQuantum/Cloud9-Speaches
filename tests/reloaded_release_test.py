@@ -55,11 +55,15 @@ class ReloadedReleaseContract(unittest.TestCase):
             self.assertIn(backend, text)
         self.assertFalse((ROOT / "Dockerfile.reloaded").exists())
 
-    def test_release_workflow_builds_three_variants(self) -> None:
+    def test_release_workflow_builds_three_variants_after_quality_gate(self) -> None:
         text = read(".github/workflows/release-images.yml")
         for variant in ("cpu", "vulkan", "cuda"):
             self.assertIn(variant, text)
         self.assertIn("docker/build-push-action", text)
+        self.assertIn("needs: [contract, quality]", text)
+        self.assertIn("uv run ruff check .", text)
+        self.assertIn("uv run pyrefly check", text)
+        self.assertIn("uv run pytest", text)
 
     def test_model_setup_helper_exists(self) -> None:
         text = read("scripts/models.sh")

@@ -18,8 +18,24 @@ jobs:
       - name: Verify Reloaded release contract
         run: python tests/reloaded_release_test.py
 
+  quality:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          activate-environment: true
+      - run: uv python install
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check --diff .
+      - run: uv run pyrefly check
+      - run: uv run pytest -m "not requires_openai and not requires_gated_hf_model" tests/
+
   docker:
-    needs: contract
+    needs: [contract, quality]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
