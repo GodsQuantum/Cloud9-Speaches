@@ -33,7 +33,7 @@ The goal is simple: clone the repo, choose the Compose file matching the hardwar
 - **Streaming + diarization paths** — model capabilities remain exposed behind the same server.
 - **TTS included** — Speaches keeps its Kokoro and Piper paths.
 - **Persistent model cache** — container upgrades do not redownload every model.
-- **No Cloud9-specific artifacts** — published images build from upstream sources and pinned commits.
+- **No host-specific artifacts** — published images build from upstream sources and pinned commits.
 
 ## 🖥️ Pick your hardware
 
