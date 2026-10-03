@@ -139,12 +139,13 @@ def run_qwen_chunked(
     sample_rate: int,
     language: str | None,
     timestamps: str,
+    prompt: str | None = None,
     max_seconds: float = 30.0,
 ) -> SimpleNamespace:
     max_samples = max(1, int(sample_rate * max_seconds))
     starts = list(range(0, len(audio), max_samples))
     chunks = [audio[start : min(len(audio), start + max_samples)] for start in starts]
-    results = session.run_batch(chunks, language=language, timestamps=timestamps)
+    results = session.run_batch(chunks, language=language, timestamps=timestamps, prompt=prompt)
     parts = [
         _offset_result(result, round(start * 1000 / sample_rate)) for start, result in zip(starts, results, strict=True)
     ]
@@ -201,9 +202,15 @@ class TranscribeCppModelManager(BaseModelManager):
                         sample_rate=request.audio.sample_rate,
                         language=language,
                         timestamps=timestamps,
+                        prompt=request.prompt,
                     )
                 else:
-                    result = session.run(request.audio.data, language=language, timestamps=timestamps)
+                    result = session.run(
+                        request.audio.data,
+                        language=language,
+                        timestamps=timestamps,
+                        prompt=request.prompt,
+                    )
         return transcribe_result_to_response(
             result,
             request.response_format,
@@ -239,7 +246,7 @@ class TranscribeCppModelManager(BaseModelManager):
             family = None
             if getattr(model, "arch", "") == "parakeet":
                 family = transcribe_cpp.ParakeetStreamOptions(att_context_right=6)
-            stream_kwargs = {"language": language, "timestamps": timestamps}
+            stream_kwargs = {"language": language, "timestamps": timestamps, "prompt": request.prompt}
             if family is not None:
                 stream_kwargs["family"] = family
 

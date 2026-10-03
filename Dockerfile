@@ -3,8 +3,9 @@ ARG TRANSCRIBE_BUILDER_IMAGE=ubuntu:24.04
 ARG BASE_IMAGE=ubuntu:24.04
 FROM ${TRANSCRIBE_BUILDER_IMAGE} AS transcribe-builder
 
-ARG TRANSCRIBE_REF=be7a8b35e9ba2df20298bd26e32d53407c3bcbcd
+ARG TRANSCRIBE_REF=077110eb00ca6880e13bef4ddebf766b3b76896c
 ARG TRANSCRIBE_BACKEND=cpu
+ARG TRANSCRIBE_BUILD_JOBS=4
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       build-essential ca-certificates cmake git glslc libopenblas-dev libvulkan-dev ninja-build spirv-headers \
@@ -29,7 +30,7 @@ RUN case "${TRANSCRIBE_BACKEND}" in \
       -DTRANSCRIBE_BUILD_TOOLS=OFF \
       -DTRANSCRIBE_USE_SYSTEM_BLAS=ON \
       ${BACKEND_FLAGS} \
- && cmake --build transcribe.cpp/build --parallel \
+ && cmake --build transcribe.cpp/build --parallel "${TRANSCRIBE_BUILD_JOBS}" \
  && cmake --install transcribe.cpp/build --prefix /opt/transcribe
 RUN mkdir -p /opt/transcribe/python \
  && cp -a transcribe.cpp/bindings/python/src/transcribe_cpp /opt/transcribe/python/

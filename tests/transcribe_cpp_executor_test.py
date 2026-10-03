@@ -149,6 +149,7 @@ def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> 
         model="owner/model",
         stream=False,
         language="fr",
+        prompt="Kenny Vago, Emma de Foucaud",
         response_format="verbose_json",
         temperature=0.0,
         timestamp_granularities=["word", "segment"],
@@ -165,6 +166,7 @@ def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> 
     assert calls[0][0] == 16000
     assert calls[0][1]["language"] == "fr-FR"
     assert calls[0][1]["timestamps"] == "word"
+    assert calls[0][1]["prompt"] == "Kenny Vago, Emma de Foucaud"
 
 
 def test_verbose_json_can_use_resolved_language_when_runtime_omits_it() -> None:
@@ -225,6 +227,7 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
         model="owner/qwen",
         stream=False,
         language="fr",
+        prompt="Kenny Vago, Emma de Foucaud",
         response_format="verbose_json",
         temperature=0.0,
         timestamp_granularities=["word", "segment"],
@@ -236,7 +239,7 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
         "openai.types.audio.TranscriptionVerbose", manager.handle_non_streaming_transcription_request(request)
     )
 
-    assert calls == [([300, 300, 50], {"language": None, "timestamps": "none"})]
+    assert calls == [([300, 300, 50], {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"})]
     assert response.text == "A B C"
     assert response.segments is not None
     assert response.words is not None
@@ -323,6 +326,7 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
         model="owner/nemotron",
         stream=True,
         language="fr",
+        prompt="Kenny Vago, Emma de Foucaud",
         response_format="json",
         temperature=0.0,
         timestamp_granularities=["segment"],
@@ -339,6 +343,7 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
     assert done_event.text == "Bonjour monde"
     assert stream_kwargs["language"] == "fr-FR"
     assert stream_kwargs["timestamps"] == "segment"
+    assert stream_kwargs["prompt"] == "Kenny Vago, Emma de Foucaud"
     assert stream_kwargs["family"].att_context_right == 6
 
 
