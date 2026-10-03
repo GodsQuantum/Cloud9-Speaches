@@ -1,0 +1,1 @@
+Bonjour, ceci est un test de transcription en français pour Cloud Nine. À Paris, le moteur doit reconnaître les accents, les nombres comme vingt-trois, et des noms techniques comme Vulkan, Qwen et Syncthing, sans inventer de mots.
