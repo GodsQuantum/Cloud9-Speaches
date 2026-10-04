@@ -67,7 +67,7 @@ NVIDIA nécessite le NVIDIA Container Toolkit. L'interface et l'API sont ensuite
 Après le premier démarrage :
 
 ~~~bash
-./scripts/models.sh
+bash ./scripts/models.sh
 ~~~
 
 Trois packs sont proposés :

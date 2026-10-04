@@ -51,7 +51,7 @@ Set `TRANSCRIBE_BACKEND=cpu` and `WHISPER_DEVICE=cpu` to run inference on CPU wh
 After the container is running:
 
 ~~~bash
-./scripts/models.sh
+bash ./scripts/models.sh
 ~~~
 
 The helper offers lean, recommended and full model packs. Weights are stored in the persistent Docker model volume and are not baked into the application image.

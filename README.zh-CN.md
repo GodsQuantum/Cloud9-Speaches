@@ -67,7 +67,7 @@ NVIDIA 主机还需要安装 NVIDIA Container Toolkit。默认 Web UI 与 API �
 容器启动后运行：
 
 ~~~bash
-./scripts/models.sh
+bash ./scripts/models.sh
 ~~~
 
 脚本提供三个模型包：

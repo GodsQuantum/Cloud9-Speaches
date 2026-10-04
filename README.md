@@ -86,7 +86,7 @@ Open http://SERVER:8000 or test the API with curl against http://SERVER:8000/hea
 Start the container first, then run:
 
 ~~~bash
-./scripts/models.sh
+bash ./scripts/models.sh
 ~~~
 
 The helper offers three packs:
@@ -97,7 +97,7 @@ The helper offers three packs:
 | recommended | lean + Qwen3-ASR 0.6B + Whisper Large-v3-Turbo |
 | full | recommended + Qwen3-ASR 1.7B + Parakeet v3 + Sortformer diarization |
 
-Run ./scripts/models.sh recommended non-interactively, or pass exact Hugging Face repositories with ./scripts/models.sh custom MODEL_ID....
+Run bash ./scripts/models.sh recommended non-interactively, or pass exact Hugging Face repositories with bash ./scripts/models.sh custom MODEL_ID....
 
 Models live in the persistent speaches-models Docker volume. They are not baked into the image, so upgrades do not duplicate gigabytes of weights.
 
