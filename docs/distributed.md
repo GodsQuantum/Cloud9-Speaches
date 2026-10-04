@@ -1,6 +1,6 @@
 # Multi-node speech
 
-Speaches Reloaded scales across machines by **routing complete STT/TTS jobs to replicated workers**. Do not split one
+Cloud9-Speaches scales across machines by **routing complete STT/TTS jobs to replicated workers**. Do not split one
 audio transcription across machines at the engine level unless a model explicitly supports chunking with a
 correct merge policy.
 
@@ -8,7 +8,7 @@ correct merge policy.
 
 Install the same release and desired model pack on both nodes, then verify:
 
-`SPEACHES_CLUSTER_NODES=http://NODE1:8000,http://NODE2:8000 ./scripts/cluster-doctor.sh`
+`SPEACHES_CLUSTER_NODES=http://NODE1:8000,http://NODE2:8000 bash ./scripts/cluster-doctor.sh`
 
 A health-aware reverse proxy can then distribute ordinary transcription and speech requests. Prefer
 least-connections because audio jobs have highly variable durations.
