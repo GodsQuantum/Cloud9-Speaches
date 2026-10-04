@@ -1,6 +1,6 @@
-# Speaches Reloaded
+# Cloud9-Speaches
 
-Speaches Reloaded is an unofficial community distribution of Speaches with an additional native transcribe.cpp execution path.
+Cloud9-Speaches is an unofficial community distribution of Speaches with an additional native transcribe.cpp execution path.
 
 It keeps the OpenAI-compatible API, UI, model lifecycle, faster-whisper, Kokoro and Piper paths from Speaches, while adding GGUF speech models through CPU, Vulkan or CUDA.
 

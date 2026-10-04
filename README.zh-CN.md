@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded 标志">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches 标志">
 </p>
 
 <h1 align="center">Cloud9-Speaches</h1>
@@ -19,7 +19,7 @@
 
 ---
 
-**Speaches Reloaded** 是 Speaches 的非官方社区发行版。它保留 Speaches 的 Web UI、模型生命周期管理和 OpenAI 兼容 API，同时加入 transcribe.cpp，让同一个服务可以运行现代 GGUF 语音模型。
+**Cloud9-Speaches** 是 Speaches 的非官方社区发行版。它保留 Speaches 的 Web UI、模型生命周期管理和 OpenAI 兼容 API，同时加入 transcribe.cpp，让同一个服务可以运行现代 GGUF 语音模型。
 
 ## ✨ 主要特点
 
@@ -92,4 +92,4 @@ Hugging Face 模型存放在持久化 Docker 卷 speaches-models 中，不会被
 
 ## 许可证
 
-Speaches Reloaded 是非官方社区发行版，保留 Speaches 的 Git 历史与 MIT 许可证。transcribe.cpp 作为外部依赖构建，并保留其自身许可证及第三方声明。
+Cloud9-Speaches 是非官方社区发行版，保留 Speaches 的 Git 历史与 MIT 许可证。transcribe.cpp 作为外部依赖构建，并保留其自身许可证及第三方声明。

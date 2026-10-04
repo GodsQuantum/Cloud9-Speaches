@@ -38,7 +38,7 @@ RUN mkdir -p /opt/transcribe/python \
 FROM ${BASE_IMAGE} AS runtime
 
 ARG TRANSCRIBE_BACKEND=cpu
-LABEL org.opencontainers.image.title="Speaches Reloaded" \
+LABEL org.opencontainers.image.title="Cloud9-Speaches" \
       org.opencontainers.image.description="Speaches with transcribe.cpp CPU, Vulkan and CUDA backends" \
       org.opencontainers.image.source="https://github.com/GodsQuantum/speaches-reloaded" \
       org.opencontainers.image.licenses="MIT"

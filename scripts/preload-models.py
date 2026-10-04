@@ -13,7 +13,7 @@ PATTERNS = {
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Preload model repositories into Speaches Reloaded.")
+    parser = argparse.ArgumentParser(description="Preload model repositories into Cloud9-Speaches.")
     parser.add_argument("models", nargs="+", help="Hugging Face model repository IDs")
     args = parser.parse_args()
     for model in args.models:

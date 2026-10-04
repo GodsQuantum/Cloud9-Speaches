@@ -1,6 +1,6 @@
 # Installation
 
-Speaches Reloaded publishes three Linux x86-64 images:
+Cloud9-Speaches publishes three Linux x86-64 images:
 
 | Hardware / choice | Image | Compose |
 |---|---|---|

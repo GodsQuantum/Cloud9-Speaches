@@ -12,7 +12,7 @@ def read(path: str) -> str:
 class ReloadedReleaseContract(unittest.TestCase):
     def test_brand_and_translations_exist(self) -> None:
         for path in ("README.md", "README.fr.md", "README.zh-CN.md"):
-            self.assertIn("Speaches Reloaded", read(path))
+            self.assertIn("Cloud9-Speaches", read(path))
 
     def test_logo_is_a_real_svg(self) -> None:
         logo = read("docs/assets/speaches-reloaded-logo.svg")

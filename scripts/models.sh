@@ -43,7 +43,7 @@ case "$preset" in
 esac
 
 docker inspect "$container" >/dev/null 2>&1 || {
-  echo "Container '$container' not found. Start Speaches Reloaded first." >&2
+  echo "Container '$container' not found. Start Cloud9-Speaches first." >&2
   exit 1
 }
 [[ "$(docker inspect -f '{{.State.Running}}' "$container")" == "true" ]] || {

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded logo">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches logo">
 </p>
 
 <h1 align="center">Cloud9-Speaches</h1>
@@ -118,7 +118,7 @@ Models live in the persistent speaches-models Docker volume. They are not baked 
 OpenAI-compatible clients
           │
           ▼
-  Speaches Reloaded
+  Cloud9-Speaches
     │     │      │
     │     │      ├── Kokoro / Piper ──► TTS
     │     ├──────── faster-whisper ───► Whisper STT

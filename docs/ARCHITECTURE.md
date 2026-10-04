@@ -1,6 +1,6 @@
-# Speaches Reloaded architecture
+# Cloud9-Speaches architecture
 
-Speaches Reloaded keeps Speaches as the OpenAI-compatible API, UI and model-lifecycle layer. It adds transcribe.cpp as a second STT executor instead of replacing the existing faster-whisper, Kokoro or Piper paths.
+Cloud9-Speaches keeps Speaches as the OpenAI-compatible API, UI and model-lifecycle layer. It adds transcribe.cpp as a second STT executor instead of replacing the existing faster-whisper, Kokoro or Piper paths.
 
 ## Runtime paths
 

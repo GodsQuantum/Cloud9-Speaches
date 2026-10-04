@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Speaches Reloaded">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Cloud9-Speaches">
 </p>
 
 <h1 align="center">Cloud9-Speaches</h1>
@@ -19,7 +19,7 @@
 
 ---
 
-**Speaches Reloaded** est une distribution communautaire de Speaches. Elle conserve son interface et son API compatible OpenAI, puis ajoute transcribe.cpp pour utiliser des modèles vocaux GGUF modernes sans imposer la même stack d'inférence à toutes les machines.
+**Cloud9-Speaches** est une distribution communautaire de Speaches. Elle conserve son interface et son API compatible OpenAI, puis ajoute transcribe.cpp pour utiliser des modèles vocaux GGUF modernes sans imposer la même stack d'inférence à toutes les machines.
 
 ## ✨ Pourquoi Reloaded ?
 
@@ -92,4 +92,4 @@ Le cache Hugging Face est stocké dans le volume Docker persistant speaches-mode
 
 ## Licence
 
-Speaches Reloaded est une distribution communautaire non officielle. Le projet conserve l'historique Git et la licence MIT de Speaches ; transcribe.cpp reste une dépendance externe avec sa propre licence et ses notices tierces.
+Cloud9-Speaches est une distribution communautaire non officielle. Le projet conserve l'historique Git et la licence MIT de Speaches ; transcribe.cpp reste une dépendance externe avec sa propre licence et ses notices tierces.
