@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded 标志">
 </p>
 
-<h1 align="center">Speaches Reloaded</h1>
+<h1 align="center">Cloud9-Speaches</h1>
 
 <p align="center">
   <strong>一个兼容 OpenAI 的语音 API。支持 CPU、Vulkan 和 CUDA。</strong><br>

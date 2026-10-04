@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Speaches Reloaded">
 </p>
 
-<h1 align="center">Speaches Reloaded</h1>
+<h1 align="center">Cloud9-Speaches</h1>
 
 <p align="center">
   <strong>Une seule API vocale compatible OpenAI. CPU, Vulkan ou CUDA.</strong><br>

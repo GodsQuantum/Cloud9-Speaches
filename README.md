@@ -2,11 +2,11 @@
   <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded logo">
 </p>
 
-<h1 align="center">Speaches Reloaded</h1>
+<h1 align="center">Cloud9-Speaches</h1>
 
 <p align="center">
   <strong>One OpenAI-compatible speech API. CPU, Vulkan or CUDA.</strong><br>
-  Speaches + transcribe.cpp, packaged for fast self-hosted STT/TTS on NVIDIA, AMD, Intel and CPU-only servers.
+  Cloud9-Speaches: Speaches + transcribe.cpp, packaged for fast self-hosted STT/TTS on NVIDIA, AMD, Intel and CPU-only servers.
 </p>
 
 <p align="center">
@@ -21,9 +21,11 @@
 
 ---
 
-**Speaches Reloaded** is a community distribution of [Speaches](https://github.com/speaches-ai/speaches). It keeps the Speaches UI and OpenAI-compatible API, then adds a native [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) STT path so the same server can use modern GGUF speech models without forcing every machine into one inference stack.
+**Cloud9-Speaches** (formerly Speaches Reloaded) is a community distribution of [Speaches](https://github.com/speaches-ai/speaches). It keeps the Speaches UI and OpenAI-compatible API, then adds a native [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) STT path so the same server can use modern GGUF speech models without forcing every machine into one inference stack.
 
 The goal is simple: clone the repo, choose the Compose file matching the hardware, and keep the same OpenAI-compatible /v1 speech API.
+
+> **Repository transition:** the product/canonical name is now **Cloud9-Speaches**. The current GitHub slug and GHCR image names remain `Speaches-Reloaded` / `speaches-reloaded` until the repository rename can be performed without losing Git history or breaking existing pulls.
 ## ✨ Why Reloaded?
 
 - **Three optimized images** — CPU-only, Vulkan for AMD/Intel, CUDA for NVIDIA.
@@ -34,6 +36,7 @@ The goal is simple: clone the repo, choose the Compose file matching the hardwar
 - **TTS included** — Speaches keeps its Kokoro and Piper paths.
 - **Persistent model cache** — container upgrades do not redownload every model.
 - **No host-specific artifacts** — published images build from upstream sources and pinned commits.
+- **Multi-node ready** — replicate workers on several machines and validate them with `scripts/cluster-doctor.sh`; ordinary STT/TTS jobs use request-level load balancing while realtime connections remain pinned to one worker. See [docs/distributed.md](docs/distributed.md).
 
 ## 🖥️ Pick your hardware
 
@@ -145,7 +148,7 @@ docker build -f Dockerfile --build-arg TRANSCRIBE_BACKEND=cpu -t speaches-reload
 ~~~
 ## Credits & license
 
-Speaches Reloaded is an unofficial community distribution built on Speaches and transcribe.cpp. It is not affiliated with or endorsed by the upstream projects.
+Cloud9-Speaches is an unofficial community distribution built on Speaches and transcribe.cpp. It is not affiliated with or endorsed by the upstream projects.
 
 The Speaches code and this distribution retain the MIT license and upstream Git history. transcribe.cpp is built as an external dependency and retains its own license and third-party notices.
 
