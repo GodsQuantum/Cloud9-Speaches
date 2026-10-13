@@ -6,7 +6,12 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
+from speaches.executors.cloud9_word_alignment import (
+    WordAlignmentError,
+    align_words,
+    native_word_timings_valid,
+    optionally_align_whisper_words,
+)
 from speaches.executors.transcribe_cpp import optionally_align_words
 
 
@@ -165,3 +170,66 @@ def test_invalid_native_words_force_existing_autosubs_alignment(monkeypatch: pyt
     mocked.assert_called_once()
     assert len(out.words) == 2
     assert out.segments[0].t1_ms == 880
+
+
+def test_whisper_turbo_word_timestamps_native_pass_without_extra_alignment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import openai.types.audio
+
+    monkeypatch.setenv("CLOUD9_WORD_ALIGNMENT_URL", "http://aligner/align")
+    monkeypatch.setenv("CLOUD9_WORD_ALIGNMENT_STRATEGY", "native-first")
+    original = openai.types.audio.TranscriptionVerbose(
+        language="fr",
+        duration=1.0,
+        text="Bonjour monde.",
+        segments=[],
+        words=[
+            openai.types.audio.TranscriptionWord(start=0.02, end=0.43, word="Bonjour"),
+            openai.types.audio.TranscriptionWord(start=0.46, end=0.88, word="monde."),
+        ],
+    )
+    request = SimpleNamespace(
+        audio=fake_audio(),
+        response_format="verbose_json",
+        timestamp_granularities=["word"],
+        language="fr",
+    )
+    with patch("speaches.executors.cloud9_word_alignment.align_words") as mocked:
+        out = optionally_align_whisper_words(original, request=request)
+    assert out is original
+    mocked.assert_not_called()
+
+
+def test_whisper_turbo_invalid_words_get_real_alignment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import openai.types.audio
+
+    monkeypatch.setenv("CLOUD9_WORD_ALIGNMENT_URL", "http://aligner/align")
+    original = openai.types.audio.TranscriptionVerbose(
+        language="fr",
+        duration=1.0,
+        text="Bonjour monde.",
+        segments=[],
+        words=[
+            openai.types.audio.TranscriptionWord(start=0.02, end=0.43, word="Bonjour"),
+            openai.types.audio.TranscriptionWord(start=0.90, end=1.24, word="monde."),
+        ],
+    )
+    aligned = (
+        SimpleNamespace(text="Bonjour", t0_ms=20, t1_ms=400),
+        SimpleNamespace(text="monde.", t0_ms=460, t1_ms=880),
+    )
+    request = SimpleNamespace(
+        audio=fake_audio(),
+        response_format="verbose_json",
+        timestamp_granularities=["word"],
+        language="fr",
+    )
+    with patch("speaches.executors.cloud9_word_alignment.align_words", return_value=aligned):
+        out = optionally_align_whisper_words(original, request=request)
+    assert out.text == original.text
+    assert out.words is not None
+    assert [w.end for w in out.words] == [0.4, 0.88]
+    assert original.words[1].end == 1.24
