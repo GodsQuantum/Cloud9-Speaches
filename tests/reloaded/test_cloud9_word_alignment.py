@@ -232,4 +232,5 @@ def test_whisper_turbo_invalid_words_get_real_alignment(
     assert out.text == original.text
     assert out.words is not None
     assert [w.end for w in out.words] == [0.4, 0.88]
+    assert original.words is not None
     assert original.words[1].end == 1.24

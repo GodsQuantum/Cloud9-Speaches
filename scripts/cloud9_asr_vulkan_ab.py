@@ -56,7 +56,7 @@ def main() -> None:
     audio, rate = sf.read("/bench/fr_regression_v1.wav", dtype="float32")
     assert audio.ndim == 1 and rate == 16000, (audio.shape, rate)
     duration = len(audio) / rate
-    from transcribe_cpp import Model
+    from transcribe_cpp import Model  # pyrefly: ignore[missing-import] — installed in runtime Docker image
 
     started = time.monotonic()
     model = Model(str(paths[0]), backend=args.backend)
