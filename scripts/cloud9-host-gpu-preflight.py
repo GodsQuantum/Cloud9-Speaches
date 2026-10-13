@@ -33,7 +33,10 @@ def mem_available_kb() -> int:
 
 def psi_full(path: str) -> float:
     line = next(x for x in read(path).splitlines() if x.startswith("full "))
-    return float(re.search(r"\bavg10=([\d.]+)", line).group(1))
+    match = re.search(r"\bavg10=([\d.]+)", line)
+    if match is None:
+        raise ValueError("missing PSI avg10")
+    return float(match.group(1))
 
 
 def swap_io_pages() -> int:
@@ -99,7 +102,7 @@ def check(data: dict[str, Any]) -> list[str]:
         tasks, errors = data["gpu_tasks_d"], data["recent_gpu_errors"]
         if not isinstance(tasks, list) or not isinstance(errors, list):
             raise TypeError("invalid task/error arrays")
-        if min(gtt, mem, io, pressure, swap) < 0:
+        if gtt < 0 or mem < 0 or io < 0 or pressure < 0 or swap < 0:
             raise ValueError("negative resource counter")
     except (TypeError, ValueError) as exc:
         return [f"invalid evidence: {exc}"]

@@ -10,11 +10,18 @@ import json
 import math
 from pathlib import Path
 import time
+from typing import TypedDict
 
 import numpy as np
 import soundfile as sf
 
 ROOT = Path("/home/ubuntu/.cache/huggingface/hub")
+
+
+class TimedWord(TypedDict):
+    text: str
+    start: float
+    end: float
 
 
 def normalized(text: str) -> list[str]:
@@ -56,7 +63,7 @@ def main() -> None:
     args = parser.parse_args()
     audio, duration, reference = load_audio()
     start = time.monotonic()
-    words = []
+    words: list[TimedWord] = []
     if args.engine == "turbo-ct2":
         from faster_whisper import WhisperModel
 
@@ -79,7 +86,7 @@ def main() -> None:
             {"text": w.word.strip(), "start": w.start, "end": w.end} for seg in segments for w in (seg.words or [])
         ]
     else:
-        from transcribe_cpp import Model
+        from transcribe_cpp import Model  # pyrefly: ignore[missing-import] — installed in runtime Docker image
 
         label = (
             "models--handy-computer--Qwen3-ASR-1.7B-gguf"
