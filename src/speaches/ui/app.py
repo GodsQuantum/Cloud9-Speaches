@@ -36,10 +36,10 @@ def create_gradio_demo(config: Config) -> gr.Blocks:
     ) as demo:
         gr.Markdown("# Speaches Reloaded")
         gr.Markdown(
-            "### Using Speaches Reloaded? Star the [GodsQuantum/Speaches-Reloaded repository on GitHub](https://github.com/GodsQuantum/Speaches-Reloaded). Original Speaches credits remain in the project documentation."
+            "### Using Cloud9-Speaches? Star the [GodsQuantum/Cloud9-Speaches repository on GitHub](https://github.com/GodsQuantum/Cloud9-Speaches). Original Speaches credits remain in the project documentation."
         )
         gr.Markdown(
-            "### Documentation: [Speaches Reloaded on GitHub](https://github.com/GodsQuantum/Speaches-Reloaded/tree/main/docs)"
+            "### Documentation: [Speaches Reloaded on GitHub](https://github.com/GodsQuantum/Cloud9-Speaches/tree/main/docs)"
         )
         gr.Markdown("### API schema and interactive reference: [local /docs](/docs)")
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Cloud9-Speaches">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Cloud9-Speaches/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Cloud9-Speaches">
 </p>
 
 <h1 align="center">Cloud9-Speaches</h1>
@@ -44,8 +44,8 @@ AMD et Intel partagent volontairement Vulkan : deux images séparées n'apporter
 ## 🚀 Installation
 
 ~~~bash
-git clone https://github.com/GodsQuantum/speaches-reloaded.git
-cd speaches-reloaded
+git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
+cd Cloud9-Speaches
 cp .env.example .env
 ~~~
 

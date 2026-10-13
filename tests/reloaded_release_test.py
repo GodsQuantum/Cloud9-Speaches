@@ -77,9 +77,9 @@ class ReloadedReleaseContract(unittest.TestCase):
         for alias in ("whisper-1", "stt-fast", "stt-balanced", "stt-quality", "tts-fast", "tts-quality"):
             self.assertIn(alias, aliases)
 
-    def test_ui_points_to_reloaded_documentation(self) -> None:
+    def test_ui_points_to_cloud9_speaches_documentation(self) -> None:
         text = read("src/speaches/ui/app.py")
-        self.assertIn("GodsQuantum/Speaches-Reloaded", text)
+        self.assertIn("GodsQuantum/Cloud9-Speaches", text)
         self.assertNotIn("https://speaches.ai", text)
 
 

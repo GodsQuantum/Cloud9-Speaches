@@ -11,7 +11,7 @@ Cloud9-Speaches publishes three Linux x86-64 images:
 ## Common setup
 
 ~~~bash
-git clone https://github.com/GodsQuantum/Speaches-Reloaded.git
+git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
 cd Speaches-Reloaded
 cp .env.example .env
 ~~~
