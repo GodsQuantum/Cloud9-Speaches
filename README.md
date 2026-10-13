@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches logo">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Cloud9-Speaches/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches logo">
 </p>
 
 <h1 align="center">Cloud9-Speaches</h1>
@@ -14,7 +14,7 @@
   <img alt="Docker" src="https://img.shields.io/badge/runtime-Docker-2496ed">
   <img alt="GHCR" src="https://img.shields.io/badge/images-GHCR-54cd8a">
   <img alt="CPU Vulkan CUDA" src="https://img.shields.io/badge/backends-CPU%20%7C%20Vulkan%20%7C%20CUDA-9d8cf5">
-  <a href="https://github.com/GodsQuantum/speaches-reloaded/actions/workflows/release-images.yml"><img alt="Images" src="https://github.com/GodsQuantum/speaches-reloaded/actions/workflows/release-images.yml/badge.svg"></a>
+  <a href="https://github.com/GodsQuantum/Cloud9-Speaches/actions/workflows/release-images.yml"><img alt="Images" src="https://github.com/GodsQuantum/Cloud9-Speaches/actions/workflows/release-images.yml/badge.svg"></a>
 </p>
 
 <p align="center">🇫🇷 <a href="README.fr.md">Français</a> · 🇨🇳 <a href="README.zh-CN.md">简体中文</a></p>
@@ -25,8 +25,8 @@
 
 The goal is simple: clone the repo, choose the Compose file matching the hardware, and keep the same OpenAI-compatible /v1 speech API.
 
-> **Repository transition:** the product/canonical name is now **Cloud9-Speaches**. The current GitHub slug and GHCR image names remain `Speaches-Reloaded` / `speaches-reloaded` until the repository rename can be performed without losing Git history or breaking existing pulls.
-## ✨ Why Reloaded?
+> **Repository transition:** the product/canonical name is now **Cloud9-Speaches**. The GitHub repository has been renamed to [GodsQuantum/Cloud9-Speaches](https://github.com/GodsQuantum/Cloud9-Speaches), preserving commit history and GitHub redirects. Existing GHCR image tags remain `ghcr.io/godsquantum/speaches-reloaded` for deployment compatibility; do not change image URLs until new package tags are published and validated.
+## ✨ Why Cloud9-Speaches?
 
 - **Three optimized images** — CPU-only, Vulkan for AMD/Intel, CUDA for NVIDIA.
 - **One API** — keep Speaches-compatible clients, integrations and model discovery.
@@ -55,8 +55,8 @@ AMD and Intel intentionally share one Vulkan image. Maintaining separate images 
 Requirements: Docker Engine + Docker Compose v2. NVIDIA users also need the NVIDIA Container Toolkit.
 
 ~~~bash
-git clone https://github.com/GodsQuantum/speaches-reloaded.git
-cd speaches-reloaded
+git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
+cd Cloud9-Speaches
 cp .env.example .env
 ~~~
 

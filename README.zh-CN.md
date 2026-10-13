@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches 标志">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Cloud9-Speaches/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches 标志">
 </p>
 
 <h1 align="center">Cloud9-Speaches</h1>
@@ -44,8 +44,8 @@ AMD 与 Intel 共用 Vulkan 镜像，因为两者使用相同的推理后端，�
 ## 🚀 安装
 
 ~~~bash
-git clone https://github.com/GodsQuantum/speaches-reloaded.git
-cd speaches-reloaded
+git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
+cd Cloud9-Speaches
 cp .env.example .env
 ~~~
 
