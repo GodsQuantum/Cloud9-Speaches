@@ -239,7 +239,9 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
         "openai.types.audio.TranscriptionVerbose", manager.handle_non_streaming_transcription_request(request)
     )
 
-    assert calls == [([300, 300, 50], {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"})]
+    assert calls == [
+        ([300, 300, 50], {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"})
+    ]
     assert response.text == "A B C"
     assert response.segments is not None
     assert response.words is not None
