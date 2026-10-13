@@ -55,6 +55,12 @@ class ReloadedReleaseContract(unittest.TestCase):
             self.assertIn(backend, text)
         self.assertFalse((ROOT / "Dockerfile.reloaded").exists())
 
+    def test_transcribe_040_pin_keeps_native_and_python_bindings_together(self) -> None:
+        dockerfile = read("Dockerfile")
+        self.assertIn("ARG TRANSCRIBE_REF=f1dcd15858c4bbba87ca97862b4e448b2cf15b8f", dockerfile)
+        self.assertIn('git checkout "${TRANSCRIBE_REF}"', dockerfile)
+        self.assertIn("transcribe.cpp/bindings/python/src/transcribe_cpp", dockerfile)
+
     def test_release_workflow_builds_three_variants_after_quality_gate(self) -> None:
         text = read(".github/workflows/release-images.yml")
         for variant in ("cpu", "vulkan", "cuda"):
