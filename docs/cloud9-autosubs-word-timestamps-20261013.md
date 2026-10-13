@@ -66,3 +66,16 @@ On real Cloud9 hardware, with the **same Nemotron Q8 GGUF and same 14.17s French
 This discovery changed the native-first contract: **native timing is accepted only when all words match the transcript in order, word count matches, no text is blank, starts/ends are finite and monotonic, and no end exceeds audio duration by >20ms**. When native timing fails these gates, an enabled existing CPU AutoSubs aligner is used instead. Failure of *both* paths is explicit under strict mode, never synthetic uniform timestamps.
 
 For actual subtitle synchronization, compare native and forced against **manually marked** boundaries (not just one another). The transcription itself can still misrecognize proper names (`Claudonyme`, `vulcan`, `Simplin`) even with good time alignment.
+
+
+## Avoid double alignment in the actual AutoSubs pipeline
+
+Verified against **the user's AutoSubs fork source** (`GodsQuantum/AutoSubs`):
+- `src/media/transcribe.rs` sends `verbose_json` / `timestamp_granularities[]=word` to the STT engine.
+- `src/subtitle/segment.rs` already **drops empty native words** before constructing a timeline (but still labels remaining supplied timings `Exact` without checking against full clip duration).
+- `src/jobs.rs` invokes `align_timeline(...)` *after* transcription.
+- `src/media/align.rs` sends the recognized transcript to the existing WhisperX CPU aligner **only if `alignment_enabled` is true**, then validates lexical identity, count and monotonicity. When disabled or unavailable it may retain native/inferred timings. The Rust settings default for `AUTOSUBS_ALIGNMENT_ENABLED` is false; do not assume the actual deployed profile value without inspecting its own settings.
+
+**Recommended AutoSubs mode:** if its existing alignment option is enabled and tested, leave the Cloud9-Speaches bridge **disabled** for AutoSubs requests (`CLOUD9_WORD_ALIGNMENT_URL` unset on the shared server until deliberate enablement) so only AutoSubs aligns once. This minimizes double WhisperX CPU cost and avoids mixing two alignment stages.
+
+**Cloud9-Speaches bridge is primarily for other OpenAI-compatible clients** that require reliable `verbose_json.words` directly and do not implement their own aligner. If a future AutoSubs configuration switches off its own alignment intentionally, this bridge can serve as the alternative, but do not enable both without a specific A/B demonstrating a benefit.
