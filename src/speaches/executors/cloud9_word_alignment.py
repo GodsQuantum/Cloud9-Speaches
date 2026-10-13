@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from io import BytesIO
 import math
+import os
 from types import SimpleNamespace
 from typing import Any
 
@@ -121,3 +122,54 @@ def align_words(
     if not words:
         raise WordAlignmentError("No word timings returned")
     return tuple(words)
+
+
+def optionally_align_whisper_words(response: Any, *, request: Any) -> Any:
+    """Preserve Whisper CT2/native words or use the same CPU aligner when enabled.
+
+    This covers large-v3, large-v3-turbo and small without changing the
+    upstream faster-whisper decoder. The default (unset URL) is a no-op.
+    """
+    if request.response_format != "verbose_json" or "word" not in request.timestamp_granularities:
+        return response
+    strategy = os.getenv("CLOUD9_WORD_ALIGNMENT_STRATEGY", "native-first")
+    if strategy not in ("native-first", "forced"):
+        raise WordAlignmentError(f"Invalid alignment strategy: {strategy}")
+    native = tuple(
+        SimpleNamespace(
+            text=word.word,
+            t0_ms=round(word.start * 1000),
+            t1_ms=round(word.end * 1000),
+        )
+        for word in (response.words or [])
+    )
+    valid_native = native_word_timings_valid(native, transcript=response.text, duration=request.audio.duration)
+    if valid_native and strategy == "native-first":
+        return response
+
+    endpoint = os.getenv("CLOUD9_WORD_ALIGNMENT_URL", "").strip()
+    if not endpoint:
+        if os.getenv("CLOUD9_WORD_ALIGNMENT_STRICT") == "1":
+            raise WordAlignmentError("Whisper word timestamps invalid and no alignment service configured")
+        return response
+
+    words = align_words(
+        audio=request.audio,
+        transcript=response.text,
+        language=(request.language or response.language or "").split("-", 1)[0].lower(),
+        endpoint=endpoint,
+    )
+    import openai.types.audio
+
+    return response.model_copy(
+        update={
+            "words": [
+                openai.types.audio.TranscriptionWord(
+                    start=word.t0_ms / 1000,
+                    end=word.t1_ms / 1000,
+                    word=word.text,
+                )
+                for word in words
+            ],
+        }
+    )
