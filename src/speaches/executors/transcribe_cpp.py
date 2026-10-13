@@ -1,4 +1,5 @@
 from collections.abc import Generator
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -7,6 +8,7 @@ import huggingface_hub
 
 from speaches.api_types import Model, TimestampGranularities
 from speaches.audio import Audio
+from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
 from speaches.executors.shared.base_model_manager import BaseModelManager
 from speaches.executors.shared.handler_protocol import (
     NonStreamingTranscriptionResponse,
@@ -211,6 +213,12 @@ class TranscribeCppModelManager(BaseModelManager):
                         timestamps=timestamps,
                         prompt=request.prompt,
                     )
+        try:
+            result = optionally_align_words(result, request=request, language=language)
+        except WordAlignmentError as exc:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return transcribe_result_to_response(
             result,
             request.response_format,
@@ -282,6 +290,43 @@ class TranscribeCppModelManager(BaseModelManager):
         if request.stream:
             return self.handle_streaming_transcription_request(request, **kwargs)
         return self.handle_non_streaming_transcription_request(request, **kwargs)
+
+
+def optionally_align_words(result: Any, *, request: Any, language: str | None) -> Any:
+    """Opt-in AutoSubs alignment, without altering legacy routes or native timing.
+
+    Only explicit verbose_json + word requests can trigger alignment. The URL
+    must refer to an already configured service; no extra runtime is installed.
+    """
+    if request.response_format != "verbose_json" or "word" not in request.timestamp_granularities:
+        return result
+    strategy = os.getenv("CLOUD9_WORD_ALIGNMENT_STRATEGY", "native-first")
+    if strategy not in ("native-first", "forced"):
+        raise ValueError(f"Invalid CLOUD9_WORD_ALIGNMENT_STRATEGY: {strategy}")
+    native_words = tuple(getattr(result, "words", ()) or ())
+    native_valid = native_word_timings_valid(native_words, transcript=result.text, duration=request.audio.duration)
+    if native_valid and strategy == "native-first":
+        return result
+    endpoint = os.getenv("CLOUD9_WORD_ALIGNMENT_URL", "").strip()
+    if not endpoint:
+        if os.getenv("CLOUD9_WORD_ALIGNMENT_STRICT") == "1":
+            raise WordAlignmentError("No word timestamps available; configure CLOUD9_WORD_ALIGNMENT_URL")
+        return result  # unchanged legacy behavior until explicitly enabled
+    words = align_words(
+        audio=request.audio,
+        transcript=result.text,
+        language=(request.language or language or "").split("-", 1)[0].lower(),
+        endpoint=endpoint,
+    )
+    segments = tuple(getattr(result, "segments", ()) or ())
+    if not native_valid or not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
+        segments = (SimpleNamespace(text=result.text, t0_ms=words[0].t0_ms, t1_ms=words[-1].t1_ms),)
+    return SimpleNamespace(
+        text=result.text,
+        language=getattr(result, "language", None),
+        segments=segments,
+        words=words,
+    )
 
 
 def transcribe_result_to_response(

@@ -30,13 +30,21 @@ The goal is simple: clone the repo, choose the Compose file matching the hardwar
 
 - **Three optimized images** — CPU-only, Vulkan for AMD/Intel, CUDA for NVIDIA.
 - **One API** — keep Speaches-compatible clients, integrations and model discovery.
-- **Two STT engines** — faster-whisper for Whisper compatibility plus transcribe.cpp for GGUF speech models.
+- **Three STT executors** — transcribe.cpp for GGUF (Nemotron/Qwen3-ASR), faster-whisper for Whisper CT2, plus the optional ONNX Parakeet path.
 - **Modern model families** — Nemotron, Qwen3-ASR, Parakeet, Whisper and more through transcribe.cpp.
 - **Streaming + diarization paths** — model capabilities remain exposed behind the same server.
 - **TTS included** — Speaches keeps its Kokoro and Piper paths.
 - **Persistent model cache** — container upgrades do not redownload every model.
 - **No host-specific artifacts** — published images build from upstream sources and pinned commits.
 - **Multi-node ready** — replicate workers on several machines and validate them with `scripts/cluster-doctor.sh`; ordinary STT/TTS jobs use request-level load balancing while realtime connections remain pinned to one worker. See [docs/distributed.md](docs/distributed.md).
+
+## 🎯 Verified word timestamps and Radeon benchmarking
+
+**Word-for-word captions:** Qwen3-ASR (GGUF/transcribe.cpp) needs a forced aligner because it has no native word times. Nemotron's native word outputs must be validated (an extra empty word beyond the audio end was observed). Whisper Turbo CT2 supports native word timing; all three can use the **existing AutoSubs CPU WhisperX aligner**, enabled explicitly, for corrected timing. The bridge is **opt-in**; avoid performing alignment twice when AutoSubs already does it. See [word-level timing contract](docs/cloud9-autosubs-word-timestamps-20261013.md).
+
+**CPU vs AMD Vulkan:** Real Ryzen 7 8845HS CPU results and the strictly gated Vulkan benchmark harness are recorded in [Cloud9 Radeon 780M ASR benchmarks](docs/cloud9-amd-780m-asr-cpu-vulkan-benchmarks-20261013.md). **No Vulkan gain is claimed without a healthy GPU and a real benchmark.** The separate faster-whisper/CTranslate2 backend does not gain AMD Vulkan acceleration by selecting transcribe.cpp's Vulkan setting.
+
+**Release policy:** Ordinary merges to `main` do not auto-publish the existing GHCR `latest-*` images. Tagged releases or explicit manual dispatch build them after contract and quality gates.
 
 ## 🖥️ Pick your hardware
 
