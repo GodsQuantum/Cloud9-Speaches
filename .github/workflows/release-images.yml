@@ -1,9 +1,10 @@
 name: release-images
 
+# Publishing is an explicit release action; ordinary main branch merges must NOT
+# mutate GHCR latest-* images before GPU and model certification.
 on:
   workflow_dispatch:
   push:
-    branches: [main]
     tags: ["v*"]
 
 permissions:
