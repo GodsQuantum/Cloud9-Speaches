@@ -57,3 +57,12 @@ Audio must be <=300 seconds for one alignment request; AutoSubs must chunk long 
 3. Test on real French subtitle media, with manually annotated word times and error thresholds; feature flag to revert.
 4. Restore healthy GPU before any new Vulkan engine/0.4.0 benchmark; reject while the CT700 Pym benchmark PID and GTT remain hung.
 5. Merge only after all prod tests, keep GHCR image name compatibility, preserve stable runtime and rollback path.
+
+
+## Follow-up: native Nemotron 0.3.0 word timestamps were demonstrably imperfect
+
+On real Cloud9 hardware, with the **same Nemotron Q8 GGUF and same 14.17s French audio**, a separate strict-CPU `session.run(..., timestamps="word")` produced a 36-word recognized transcript but **37 native word rows**. The last row was an empty word with boundaries `14.16–14.24s`, exceeding the audio duration. First token `Bonjour,` was `0.32–1.20s` vs forced aligner `0.26–1.001s`; these are observed disagreements, **not proof of gold-standard accuracy**. Native inference took ~9.882s after a ~1.130s model load, in a 1.5 CPU / 3GiB / no GPU test container.
+
+This discovery changed the native-first contract: **native timing is accepted only when all words match the transcript in order, word count matches, no text is blank, starts/ends are finite and monotonic, and no end exceeds audio duration by >20ms**. When native timing fails these gates, an enabled existing CPU AutoSubs aligner is used instead. Failure of *both* paths is explicit under strict mode, never synthetic uniform timestamps.
+
+For actual subtitle synchronization, compare native and forced against **manually marked** boundaries (not just one another). The transcription itself can still misrecognize proper names (`Claudonyme`, `vulcan`, `Simplin`) even with good time alignment.

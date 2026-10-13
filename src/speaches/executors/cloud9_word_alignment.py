@@ -21,6 +21,38 @@ class WordAlignmentError(RuntimeError):
     """No trustworthy alignment is available. Never manufacture word times."""
 
 
+def lexical_key(value: str) -> str:
+    """Compare orthographic words without altering the published transcript."""
+    return value.strip().strip(' .,!?;:«»()[]{}"“”').casefold()
+
+
+def native_word_timings_valid(words: tuple[Any, ...], *, transcript: str, duration: float) -> bool:
+    """Reject empty/native-overrun/incorrect words before accepting native timing."""
+    expected = transcript.split()
+    if not words or len(words) != len(expected):
+        return False
+    previous_end = 0.0
+    for index, word in enumerate(words):
+        try:
+            start, end = float(word.t0_ms) / 1000, float(word.t1_ms) / 1000
+            spoken = str(word.text)
+        except (AttributeError, TypeError, ValueError):
+            return False
+        if (
+            not spoken.strip()
+            or lexical_key(spoken) != lexical_key(expected[index])
+            or not math.isfinite(start)
+            or not math.isfinite(end)
+            or start < 0
+            or end <= start
+            or end > duration + 0.02
+            or start < previous_end - 0.04
+        ):
+            return False
+        previous_end = end
+    return True
+
+
 def align_words(
     *,
     audio: Any,
@@ -67,8 +99,7 @@ def align_words(
         if not isinstance(row, dict) or not isinstance(row.get("word"), str) or not row["word"].strip():
             raise WordAlignmentError(f"Invalid aligned word {i}")
         # Keep the recognized text, not a substitute supplied by an aligner.
-        strip_punctuation = ' .,!?;:«»()[]{}"“”'
-        if row["word"].strip(strip_punctuation).casefold() != expected[i].strip(strip_punctuation).casefold():
+        if lexical_key(row["word"]) != lexical_key(expected[i]):
             raise WordAlignmentError(f"Lexical mismatch in aligned word {i}")
         try:
             start = float(row["start"])

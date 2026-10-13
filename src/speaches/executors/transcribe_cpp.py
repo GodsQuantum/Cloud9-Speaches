@@ -8,7 +8,7 @@ import huggingface_hub
 
 from speaches.api_types import Model, TimestampGranularities
 from speaches.audio import Audio
-from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words
+from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
 from speaches.executors.shared.base_model_manager import BaseModelManager
 from speaches.executors.shared.handler_protocol import (
     NonStreamingTranscriptionResponse,
@@ -292,7 +292,7 @@ class TranscribeCppModelManager(BaseModelManager):
         return self.handle_non_streaming_transcription_request(request, **kwargs)
 
 
-def optionally_align_words(result: Any, *, request: TranscriptionRequest, language: str | None) -> Any:
+def optionally_align_words(result: Any, *, request: Any, language: str | None) -> Any:
     """Opt-in AutoSubs alignment, without altering legacy routes or native timing.
 
     Only explicit verbose_json + word requests can trigger alignment. The URL
@@ -304,7 +304,8 @@ def optionally_align_words(result: Any, *, request: TranscriptionRequest, langua
     if strategy not in ("native-first", "forced"):
         raise ValueError(f"Invalid CLOUD9_WORD_ALIGNMENT_STRATEGY: {strategy}")
     native_words = tuple(getattr(result, "words", ()) or ())
-    if native_words and strategy == "native-first":
+    native_valid = native_word_timings_valid(native_words, transcript=result.text, duration=request.audio.duration)
+    if native_valid and strategy == "native-first":
         return result
     endpoint = os.getenv("CLOUD9_WORD_ALIGNMENT_URL", "").strip()
     if not endpoint:
@@ -318,7 +319,7 @@ def optionally_align_words(result: Any, *, request: TranscriptionRequest, langua
         endpoint=endpoint,
     )
     segments = tuple(getattr(result, "segments", ()) or ())
-    if not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
+    if not native_valid or not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
         segments = (SimpleNamespace(text=result.text, t0_ms=words[0].t0_ms, t1_ms=words[-1].t1_ms),)
     return SimpleNamespace(
         text=result.text,
