@@ -6,7 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words
+from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
 from speaches.executors.transcribe_cpp import optionally_align_words
 
 
@@ -123,3 +123,45 @@ def test_strict_no_service_refuses_fabricated_words(monkeypatch: pytest.MonkeyPa
     request = SimpleNamespace(audio=fake_audio(), response_format="verbose_json", timestamp_granularities=["word"])
     with pytest.raises(WordAlignmentError, match="No word timestamps"):
         optionally_align_words(result, request=request, language="fr")
+
+
+def test_actual_nemotron_style_trailing_empty_and_audio_overrun_rejected() -> None:
+    """Observed on Cloud9: 37 native items for 36 spoken words, final item empty/14.24s."""
+    native = (
+        SimpleNamespace(text="Bonjour,", t0_ms=320, t1_ms=1200),
+        SimpleNamespace(text="monde.", t0_ms=1200, t1_ms=1520),
+        SimpleNamespace(text="", t0_ms=14160, t1_ms=14240),
+    )
+    assert not native_word_timings_valid(native, transcript="Bonjour, monde.", duration=14.17)
+    assert not native_word_timings_valid(native[:2], transcript="Bonjour, monde.", duration=1.0)
+
+
+def test_invalid_native_words_force_existing_autosubs_alignment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLOUD9_WORD_ALIGNMENT_URL", "http://aligner/align")
+    monkeypatch.setenv("CLOUD9_WORD_ALIGNMENT_STRATEGY", "native-first")
+    native = (
+        SimpleNamespace(text="Bonjour,", t0_ms=20, t1_ms=400),
+        SimpleNamespace(text="monde.", t0_ms=460, t1_ms=880),
+        SimpleNamespace(text="", t0_ms=900, t1_ms=1050),
+    )
+    result = SimpleNamespace(
+        text="Bonjour, monde.",
+        language="fr",
+        segments=(SimpleNamespace(text="Bonjour, monde.", t0_ms=0, t1_ms=1050),),
+        words=native,
+    )
+    request = SimpleNamespace(
+        audio=fake_audio(),
+        language="fr",
+        response_format="verbose_json",
+        timestamp_granularities=["word"],
+    )
+    aligned = (
+        SimpleNamespace(text="Bonjour,", t0_ms=20, t1_ms=400),
+        SimpleNamespace(text="monde.", t0_ms=460, t1_ms=880),
+    )
+    with patch("speaches.executors.transcribe_cpp.align_words", return_value=aligned) as mocked:
+        out = optionally_align_words(result, request=request, language="fr")
+    mocked.assert_called_once()
+    assert len(out.words) == 2
+    assert out.segments[0].t1_ms == 880

@@ -39,3 +39,23 @@ assert len(out.words) == 37
 assert out.segments[0].t0_ms == out.words[0].t0_ms
 assert out.segments[0].t1_ms == out.words[-1].t1_ms
 print("QWEN_NO_NATIVE_WORD_TIMING_FALLBACK_PASS", len(out.words))
+
+
+# Regression captured on the actual 0.3.0 Nemotron Q8 CPU run:
+# 37 native rows for 36 recognized words, trailing empty word at 14.24s.
+bad_native = [
+    SimpleNamespace(text=token, t0_ms=260 + i * 120, t1_ms=350 + i * 120) for i, token in enumerate(reference.split())
+]
+bad_native.append(SimpleNamespace(text="", t0_ms=14160, t1_ms=14240))
+bad_result = SimpleNamespace(
+    text=reference,
+    language="fr",
+    segments=(SimpleNamespace(text=reference, t0_ms=0, t1_ms=14240),),
+    words=bad_native,
+)
+repaired = optionally_align_words(bad_result, request=request, language="fr")
+assert len(repaired.words) == len(reference.split()) == 37
+assert not any(not word.text for word in repaired.words)
+assert repaired.words[-1].t1_ms <= round(audio.duration * 1000)
+assert repaired.segments[0].t1_ms == repaired.words[-1].t1_ms
+print("INVALID_NATIVE_GGUF_TIMESTAMP_REPLACED_WITH_REAL_AUTOSUBS_ALIGNMENT_PASS", len(repaired.words))
