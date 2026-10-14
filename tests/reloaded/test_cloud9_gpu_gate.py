@@ -60,3 +60,7 @@ def test_shell_launcher_gate_first_and_explicit_gpu_run() -> None:
     assert 'mode="${1:---check}"' in src
     assert "--device /dev/dri/renderD128" in src
     assert "flock -n 8" in src
+    assert "flock -n 9" in src
+    assert "stat -c %g /dev/dri/renderD128" in src
+    assert '--group-add "$render_group"' in src
+    assert "trap cleanup EXIT" in src
