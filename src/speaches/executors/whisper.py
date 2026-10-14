@@ -12,6 +12,7 @@ from opentelemetry import trace
 from pydantic import BaseModel
 
 from speaches.api_types import Model
+from speaches.executors.cloud9_word_alignment import WordAlignmentError, optionally_align_whisper_words
 from speaches.executors.shared.base_model_manager import BaseModelManager
 from speaches.executors.shared.handler_protocol import (  # noqa: TC001
     NonStreamingTranscriptionResponse,
@@ -176,6 +177,13 @@ class WhisperModelManager(BaseModelManager[WhisperModel]):
                 transcription_info,
                 response_format=request.response_format,
             )
+            if request.response_format == "verbose_json" and "word" in request.timestamp_granularities:
+                try:
+                    res = optionally_align_whisper_words(res, request=request)
+                except WordAlignmentError as exc:
+                    from fastapi import HTTPException
+
+                    raise HTTPException(status_code=503, detail=str(exc)) from exc
             logger.info(
                 f"Transcribed {request.audio.duration} seconds of audio in {time.perf_counter() - timelog_start} seconds"
             )

@@ -21,13 +21,22 @@
 
 **Cloud9-Speaches** est une distribution communautaire de Speaches. Elle conserve son interface et son API compatible OpenAI, puis ajoute transcribe.cpp pour utiliser des modèles vocaux GGUF modernes sans imposer la même stack d'inférence à toutes les machines.
 
-## ✨ Pourquoi Reloaded ?
+## ✨ Pourquoi Cloud9-Speaches ?
 
 - **3 images optimisées** — CPU, Vulkan pour AMD/Intel, CUDA pour NVIDIA.
 - **Une API unique** — les clients Speaches/OpenAI gardent les mêmes endpoints.
-- **Deux moteurs STT** — faster-whisper + transcribe.cpp.
+- **Trois exécutants STT** — transcribe.cpp pour les GGUF Nemotron/Qwen3-ASR, faster-whisper pour Whisper Turbo CT2 et Parakeet ONNX en option.
 - **TTS conservé** — Kokoro et Piper restent disponibles.
 - **Cache modèles persistant** — une mise à jour du conteneur ne retélécharge pas les poids.
+
+## 🎯 Sous-titres mot à mot et benchmarks Radeon
+
+Les modèles ne fournissent pas tous des timestamps natifs fiables : Qwen3-ASR nécessite un alignement forcé ; Nemotron peut émettre un mot vide et dépasser la durée audio. Whisper Turbo fournit des temps par mot qu'il faut également contrôler. Le pont **optionnel** vers le service WhisperX AutoSubs déjà installé vérifie les mots et les intervalles. Éviter un double alignement quand AutoSubs fait déjà le sien. Voir [contrat word-for-word](docs/cloud9-autosubs-word-timestamps-20261013.md).
+
+Les mesures CPU sur Ryzen 7 8845HS, les versions/quantifications et le protocole **CPU contre Vulkan Radeon 780M** sont dans le [dossier de benchmarks AMD](docs/cloud9-amd-780m-asr-cpu-vulkan-benchmarks-20261013.md). Les gains GPU ne sont pas revendiqués sans un GPU sain et des tests réels. Le moteur faster-whisper/CT2 n'acquiert pas le support Vulkan AMD simplement en configurant transcribe.cpp.
+
+Les images GHCR ne sont plus publiées automatiquement sur chaque fusion de `main` : un tag de release ou une action manuelle est nécessaire.
+
 ## 🖥️ Choisir son matériel
 
 | Matériel | Image | Compose |
