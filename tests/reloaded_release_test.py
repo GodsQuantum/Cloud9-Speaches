@@ -71,6 +71,13 @@ class ReloadedReleaseContract(unittest.TestCase):
         self.assertIn("uv run pyrefly check", text)
         self.assertIn("uv run pytest", text)
 
+    def test_release_images_only_publish_on_explicit_release(self) -> None:
+        workflow = read(".github/workflows/release-images.yml")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn('tags: ["v*"]', workflow)
+        self.assertNotIn("branches: [main]", workflow)
+        self.assertIn("push: true", workflow)
+
     def test_model_setup_helper_exists(self) -> None:
         text = read("scripts/models.sh")
         self.assertIn("recommended", text.lower())
