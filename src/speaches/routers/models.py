@@ -12,6 +12,7 @@ from speaches.api_types import (
     Model,
     ModelTask,
 )
+from speaches.cloud9_model_specialty import annotate_model_public_dict
 from speaches.dependencies import ExecutorRegistryDependency
 from speaches.executors.kokoro import KokoroModel, KokoroModelVoice
 from speaches.executors.piper import PiperModel
@@ -31,7 +32,9 @@ def list_local_models(executor_registry: ExecutorRegistryDependency, task: Model
     for executor in executors:
         if task is None or executor.task == task:
             models.extend(list(executor.model_registry.list_local_models()))
-    return JSONResponse(content={"data": [model.model_dump() for model in models], "object": "list"})
+    return JSONResponse(
+        content={"data": [annotate_model_public_dict(model.model_dump()) for model in models], "object": "list"}
+    )
 
 
 class ListAudioModelsResponse(BaseModel):
@@ -47,7 +50,9 @@ def list_local_audio_models(
     models: list[Model] = []
     for executor in executor_registry.text_to_speech:
         models.extend(list(executor.model_registry.list_local_models()))
-    return JSONResponse(content={"models": [model.model_dump() for model in models], "object": "list"})
+    return JSONResponse(
+        content={"models": [annotate_model_public_dict(model.model_dump()) for model in models], "object": "list"}
+    )
 
 
 class ListVoicesResponse(BaseModel):
@@ -75,7 +80,7 @@ def get_local_model(executor_registry: ExecutorRegistryDependency, model_id: Mod
         models.extend(list(executor.model_registry.list_local_models()))
     for model in models:
         if model.id == model_id:
-            return JSONResponse(content=model.model_dump())
+            return JSONResponse(content=annotate_model_public_dict(model.model_dump()))
     raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
 
 
