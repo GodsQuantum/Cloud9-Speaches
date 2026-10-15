@@ -41,21 +41,84 @@ def words_valid(words: list, transcript: str, duration: float) -> bool:
     return True
 
 
+def load_audio_16k(path: Path | str) -> tuple:
+    """Return mono float32 16 kHz, source rate, inference rate and duration.
+
+    Do not change the immutable gold WAV: conversion occurs in memory using
+    FFmpeg's resampler, already present in Cloud9-Speaches images.
+    """
+    audio, rate = sf.read(path, dtype="float32")
+    if audio.ndim != 1 or rate <= 0:
+        raise ValueError(f"Invalid audio shape/sample rate: {audio.shape}, {rate}")
+    original_rate = rate
+    original_duration = len(audio) / rate
+    if rate != 16000:
+        import subprocess
+
+        import numpy as np
+
+        converted = subprocess.run(
+            [
+                "/usr/bin/ffmpeg",
+                "-nostdin",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                str(path),
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-f",
+                "f32le",
+                "pipe:1",
+            ],
+            check=True,
+            capture_output=True,
+            timeout=30,
+        )
+        if len(converted.stdout) % 4 != 0 or not converted.stdout:
+            raise ValueError("ffmpeg returned truncated or empty 16 kHz PCM")
+        audio = np.frombuffer(converted.stdout, dtype="<f4").copy()
+        rate = 16000
+    duration = len(audio) / rate
+    if abs(duration - original_duration) > 0.005:
+        raise ValueError("Resampling changed the audio duration unexpectedly")
+    return audio, original_rate, rate, duration
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backend", choices=["cpu", "vulkan"], required=True)
     parser.add_argument("--model", choices=list(MODELS), required=True)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument(
+        "--audio-check-only", action="store_true", help="Validate 16 kHz audio input without loading a model"
+    )
     args = parser.parse_args()
     if not 1 <= args.repeats <= 5:
         parser.error("repeats must be 1..5")
+    try:
+        audio, original_rate, rate, duration = load_audio_16k("/bench/fr_regression_v1.wav")
+    except ValueError as error:
+        parser.error(str(error))
+    if args.audio_check_only:
+        print(
+            json.dumps(
+                {
+                    "source_rate_hz": original_rate,
+                    "inference_rate_hz": rate,
+                    "duration_s": duration,
+                    "samples": len(audio),
+                }
+            )
+        )
+        return
     repo, quant = MODELS[args.model]
     paths = list((CACHE / repo / "snapshots").glob(f"*/*-{quant}.gguf"))
     if len(paths) != 1:
         parser.error(f"exact cached GGUF missing: {args.model}; do not download implicitly")
-    audio, rate = sf.read("/bench/fr_regression_v1.wav", dtype="float32")
-    assert audio.ndim == 1 and rate == 16000, (audio.shape, rate)
-    duration = len(audio) / rate
     from transcribe_cpp import Model  # pyrefly: ignore[missing-import] — installed in runtime Docker image
 
     started = time.monotonic()
@@ -89,6 +152,8 @@ def main() -> None:
                 "model": args.model,
                 "gguf_bytes": paths[0].stat().st_size,
                 "backend": args.backend,
+                "source_audio_rate_hz": original_rate,
+                "inference_rate_hz": rate,
                 "audio_seconds": duration,
                 "load_seconds": round(loaded - started, 5),
                 "passes": passes,
