@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 type Device = Literal["cpu", "cuda", "auto"]
-type TranscribeBackend = Literal["auto", "cpu", "vulkan", "cuda"]
+type TranscribeBackend = Literal["auto", "cpu", "vulkan", "cuda", "metal"]
 
 # https://github.com/OpenNMT/CTranslate2/blob/master/docs/quantization.md#quantize-on-model-conversion
 type Quantization = Literal[
