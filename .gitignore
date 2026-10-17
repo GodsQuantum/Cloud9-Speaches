@@ -179,3 +179,9 @@ Thumbs.db
 scratchpad.md
 .claude/commands
 *.rttm
+
+
+# Cloud9 local GPU/Vulkan build artifacts (not Git source)
+.build-publish/
+.crispasr-upstream-build/
+vulkan-aligner/docker/runtime/
