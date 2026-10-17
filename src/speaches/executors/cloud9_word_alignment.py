@@ -44,7 +44,7 @@ def spoken_tokens(transcript: str) -> list[str]:
                     buffer = ""
                 result.append(prefix + ch)
                 prefix = ""
-            elif ch in "，。！？、；：" and result:
+            elif ch in "，。！？、；：" and result:  # noqa: RUF001 - intentional CJK punctuation
                 if buffer:
                     result.append(prefix + buffer)
                     prefix = ""
@@ -116,9 +116,7 @@ def align_words(
         form["model"] = model
     if duration > 38.0:
         if not segments:
-            raise WordAlignmentError(
-                "Long audio needs ASR segment offsets; refusing guessed word timing"
-            )
+            raise WordAlignmentError("Long audio needs ASR segment offsets; refusing guessed word timing")
         groupings = []
         for idx, seg in enumerate(segments):
             try:
@@ -130,6 +128,7 @@ def align_words(
             except (AttributeError, TypeError, ValueError) as exc:
                 raise WordAlignmentError(f"Invalid long-form ASR segment #{idx}") from exc
         from speaches.executors.cloud9_alignment_groups import groups_for_alignment
+
         try:
             groups_for_alignment(transcript, duration, json.dumps(groupings, ensure_ascii=False))
         except ValueError as exc:
@@ -141,11 +140,15 @@ def align_words(
     try:
         if endpoint == "internal":
             from speaches.executors.cloud9_ctc import run_alignment
+
             with tempfile.TemporaryDirectory(prefix="speaches-native-ctc-") as tmp:
                 source = Path(tmp) / "speech.wav"
                 source.write_bytes(wav.getvalue())
                 payload = run_alignment(
-                    source, transcript, language, form.get("model"),
+                    source,
+                    transcript,
+                    language,
+                    form.get("model"),
                     form.get("segments_json"),
                 )
         else:
@@ -165,9 +168,7 @@ def align_words(
     rows = payload["word_segments"]
     expected = spoken_tokens(transcript)
     if len(rows) != len(expected):
-        raise WordAlignmentError(
-            f"Forced alignment incomplete: {len(rows)} words for {len(expected)} spoken tokens"
-        )
+        raise WordAlignmentError(f"Forced alignment incomplete: {len(rows)} words for {len(expected)} spoken tokens")
     words: list[SimpleNamespace] = []
     previous_end = 0.0
     for i, row in enumerate(rows):

@@ -4,34 +4,46 @@ Production Cloud9 remains on Vulkan; installers may select CPU, CUDA or Metal
 when an appropriate upstream binary and driver are supplied. No fabricated
 word boundaries, inferred backend availability or automatic timestamp fallback.
 """
+
 from __future__ import annotations
+
 import asyncio
 import json
 import math
 import os
 from pathlib import Path
-import shutil
-import sys
 import re
+import shutil
 import subprocess
+import sys
 import tempfile
+from typing import Annotated
 import unicodedata
 import wave
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+
 try:
     from speaches.executors.cloud9_alignment_groups import groups_for_alignment
 except ImportError:
     from alignment_groups import groups_for_alignment
 
 _default_model_root = (
-    Path("/ai-models/audio/asr/aligners") if Path("/ai-models").exists()
+    Path("/ai-models/audio/asr/aligners")
+    if Path("/ai-models").exists()
     else Path(os.getenv("XDG_CACHE_HOME") or (Path.home() / ".cache")) / "cloud9-speaches" / "aligners"
 )
 ROOT = Path(os.getenv("ALIGN_MODEL_ROOT", str(_default_model_root)))
-BIN = os.getenv("CRISPASR_BIN") or shutil.which("crispasr") or (
-    "/opt/crispasr/bin/crispasr" if Path("/opt/crispasr/bin/crispasr").is_file()
-    else "crispasr.exe" if os.name == "nt" else "crispasr"
+BIN = (
+    os.getenv("CRISPASR_BIN")
+    or shutil.which("crispasr")
+    or (
+        "/opt/crispasr/bin/crispasr"
+        if Path("/opt/crispasr/bin/crispasr").is_file()
+        else "crispasr.exe"
+        if os.name == "nt"
+        else "crispasr"
+    )
 )
 VALID_COMPUTE_BACKENDS = frozenset({"auto", "cpu", "cuda", "vulkan", "metal"})
 
@@ -43,16 +55,50 @@ def selected_compute_backend() -> str:
         raise ValueError(f"Invalid CLOUD9_CTC_BACKEND={backend!r}; choose auto/cpu/cuda/vulkan/metal")
     return backend
 
-LANGUAGES = frozenset("bg cs da de el en es et fi fr hr hu it lt lv mt nl pl pt ro ru sk sl sv uk".split())
+
+LANGUAGES = frozenset(
+    [
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fi",
+        "fr",
+        "hr",
+        "hu",
+        "it",
+        "lt",
+        "lv",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sv",
+        "uk",
+    ]
+)
 MODELS = {
-    "fastconformer-fr-q4": ("cstr--stt-fr-fastconformer-hybrid-ctc-large-GGUF",
-                            "stt-fr-fastconformer-hybrid-ctc-large-q4_k.gguf"),
-    "fastconformer-en-q4": ("cstr--stt-en-fastconformer-hybrid-ctc-large-GGUF",
-                            "stt-en-fastconformer-hybrid-ctc-large-q4_k.gguf"),
-    "wav2vec2-zh-q4": ("cstr--wav2vec2-large-xlsr-53-chinese-zh-cn-GGUF",
-                        "wav2vec2-large-xlsr-53-chinese-zh-cn-q4_k.gguf"),
-    "canary-ctc-multilingual-q4": ("cstr--canary-ctc-aligner-GGUF",
-                                    "canary-ctc-aligner-q4_k.gguf"),
+    "fastconformer-fr-q4": (
+        "cstr--stt-fr-fastconformer-hybrid-ctc-large-GGUF",
+        "stt-fr-fastconformer-hybrid-ctc-large-q4_k.gguf",
+    ),
+    "fastconformer-en-q4": (
+        "cstr--stt-en-fastconformer-hybrid-ctc-large-GGUF",
+        "stt-en-fastconformer-hybrid-ctc-large-q4_k.gguf",
+    ),
+    "wav2vec2-zh-q4": (
+        "cstr--wav2vec2-large-xlsr-53-chinese-zh-cn-GGUF",
+        "wav2vec2-large-xlsr-53-chinese-zh-cn-q4_k.gguf",
+    ),
+    "canary-ctc-multilingual-q4": ("cstr--canary-ctc-aligner-GGUF", "canary-ctc-aligner-q4_k.gguf"),
 }
 app = FastAPI(title="Cloud9 Native CTC Aligner", version="1.0.0")
 gate = asyncio.Semaphore(1)
@@ -63,9 +109,10 @@ def detect_language(text: str) -> str:
         return "zh"
     try:
         from langdetect import detect
+
         return detect(text)
-    except Exception:
-        raise ValueError("Automatic language detection unavailable or inconclusive; specify language")
+    except Exception as exc:
+        raise ValueError("Automatic language detection unavailable or inconclusive; specify language") from exc
 
 
 def choose_model(model: str | None, language: str, transcript: str) -> tuple[str, str]:
@@ -74,8 +121,9 @@ def choose_model(model: str | None, language: str, transcript: str) -> tuple[str
         code = detect_language(transcript)
     selected = (model or "").strip().lower()
     if selected in ("", "auto", "default"):
-        selected = {"fr": "fastconformer-fr-q4", "en": "fastconformer-en-q4",
-                    "zh": "wav2vec2-zh-q4"}.get(code, "canary-ctc-multilingual-q4")
+        selected = {"fr": "fastconformer-fr-q4", "en": "fastconformer-en-q4", "zh": "wav2vec2-zh-q4"}.get(
+            code, "canary-ctc-multilingual-q4"
+        )
     if selected not in MODELS:
         raise ValueError(f"Unknown alignment model: {selected}")
     if selected == "canary-ctc-multilingual-q4" and code not in LANGUAGES:
@@ -121,7 +169,7 @@ def acoustic_tokens(text: str) -> list[str]:
                     result.append(buf)
                     buf = ""
                 result.append(ch)
-            elif ch in "，。！？、；：":
+            elif ch in "，。！？、；：":  # noqa: RUF001 - intentional CJK punctuation
                 if buf:
                     result.append(buf)
                     buf = ""
@@ -170,8 +218,7 @@ def restore_original_tokens(raw: list[dict], text: str) -> list[dict]:
     return aligned
 
 
-def run_alignment(wav_path: Path, text: str, language: str,
-                  model: str | None, segment_json: str | None) -> dict:
+def run_alignment(wav_path: Path, text: str, language: str, model: str | None, segment_json: str | None) -> dict:
     with wave.open(str(wav_path), "rb") as f:
         if f.getnchannels() != 1 or f.getframerate() != 16000 or f.getsampwidth() != 2:
             raise ValueError("Expected 16kHz mono signed PCM16 WAV")
@@ -208,30 +255,45 @@ def run_alignment(wav_path: Path, text: str, language: str,
                     target.setframerate(16000)
                     target.writeframes(samples)
                 text_file.write_text(group["text"], encoding="utf8")
-                args = [BIN, "--align-only", "--gpu-backend", selected_compute_backend(),
-                        "-am", str(ROOT / directory / filename),
-                        "-f", str(chunk), "--text-file", str(text_file),
-                        "--align-format", "json", "--align-granularity", "word",
-                        "--align-output", str(result_file)]
+                args = [
+                    BIN,
+                    "--align-only",
+                    "--gpu-backend",
+                    selected_compute_backend(),
+                    "-am",
+                    str(ROOT / directory / filename),
+                    "-f",
+                    str(chunk),
+                    "--text-file",
+                    str(text_file),
+                    "--align-format",
+                    "json",
+                    "--align-granularity",
+                    "word",
+                    "--align-output",
+                    str(result_file),
+                ]
                 # The upstream CrispASR Vulkan runtime targets glibc 2.43,
                 # while Speaches runs Ubuntu 24.04/glibc 2.39. Launch only this
                 # child with a private loader; never upgrade the app-wide libc.
                 loader = Path("/opt/ctc-glibc/ld-linux-x86-64.so.2")
                 child_env = os.environ.copy()
                 if sys.platform.startswith("linux") and loader.is_file():
-                    args = [str(loader), "--library-path",
-                            "/opt/ctc-glibc:/opt/crispasr/lib:/usr/lib/x86_64-linux-gnu",
-                            *args]
+                    args = [
+                        str(loader),
+                        "--library-path",
+                        "/opt/ctc-glibc:/opt/crispasr/lib:/usr/lib/x86_64-linux-gnu",
+                        *args,
+                    ]
                     child_env.pop("LD_LIBRARY_PATH", None)
                 elif sys.platform.startswith("linux") and Path("/opt/crispasr/lib").is_dir():
                     child_env["LD_LIBRARY_PATH"] = "/opt/crispasr/lib"
-                proc = subprocess.run(args, capture_output=True, text=True,
-                                      timeout=300, check=False, env=child_env)
+                proc = subprocess.run(args, capture_output=True, text=True, timeout=300, check=False, env=child_env)
                 if proc.returncode or not result_file.exists():
                     raise RuntimeError(f"Vulkan CTC alignment failed for chunk {group_idx}")
                 parsed = json.loads(result_file.read_text(encoding="utf8"))
                 if not isinstance(parsed, list):
-                    raise ValueError("CrispASR did not return a word-level JSON array")
+                    raise ValueError("CrispASR did not return a word-level JSON array")  # noqa: TRY004 - bad external output
                 words = restore_original_tokens(parsed, group["text"])
                 for word in words:
                     word["start"] = round(word["start"] + start, 6)
@@ -242,42 +304,69 @@ def run_alignment(wav_path: Path, text: str, language: str,
                 rows.extend(words)
     if len(rows) != len(acoustic_tokens(text)):
         raise ValueError("Full transcript is not acoustically aligned")
-    return {"word_segments": rows,
-            "quality": {"backend": selected_compute_backend(), "backend_selection": "configured",
-                        "method": "crispasr-ctc-forced-alignment",
-                        "interpolation": False, "model": chosen, "language": detected,
-                        "alignment_chunks": len(groups), "frame_confidence_available": False,
-                        "accuracy_certified": False, "audio_duration": duration,
-                        "standalone_punctuation_attached": original_tokens - len(text.split())}}
+    return {
+        "word_segments": rows,
+        "quality": {
+            "backend": selected_compute_backend(),
+            "backend_selection": "configured",
+            "method": "crispasr-ctc-forced-alignment",
+            "interpolation": False,
+            "model": chosen,
+            "language": detected,
+            "alignment_chunks": len(groups),
+            "frame_confidence_available": False,
+            "accuracy_certified": False,
+            "audio_duration": duration,
+            "standalone_punctuation_attached": original_tokens - len(text.split()),
+        },
+    }
 
 
 @app.get("/health")
-async def health():
-    return {"status": "ok", "backend": selected_compute_backend(),
-            "backend_selection": "configured_not_hardware_probed", "models": [
-        {"id": name, "available": (ROOT / directory / filename).is_file()}
-        for name, (directory, filename) in MODELS.items()]}
+async def health() -> dict:
+    return {
+        "status": "ok",
+        "backend": selected_compute_backend(),
+        "backend_selection": "configured_not_hardware_probed",
+        "models": [
+            {"id": name, "available": (ROOT / directory / filename).is_file()}
+            for name, (directory, filename) in MODELS.items()
+        ],
+    }
 
 
 @app.get("/models")
-async def models():
-    return {"default": "auto", "fallback": "canary-ctc-multilingual-q4",
-            "language_defaults": {"fr": "fastconformer-fr-q4",
-                                  "en": "fastconformer-en-q4",
-                                  "zh": "wav2vec2-zh-q4"},
-            "models": [{"id": key, "languages":
-                        ["fr"] if key.startswith("fastconformer-fr")
-                        else ["en"] if key.startswith("fastconformer-en")
-                        else ["zh"] if key.startswith("wav2vec2-zh")
-                        else sorted(LANGUAGES)}
-                       for key in MODELS]}
+async def models() -> dict:
+    return {
+        "default": "auto",
+        "fallback": "canary-ctc-multilingual-q4",
+        "language_defaults": {"fr": "fastconformer-fr-q4", "en": "fastconformer-en-q4", "zh": "wav2vec2-zh-q4"},
+        "models": [
+            {
+                "id": key,
+                "languages": ["fr"]
+                if key.startswith("fastconformer-fr")
+                else ["en"]
+                if key.startswith("fastconformer-en")
+                else ["zh"]
+                if key.startswith("wav2vec2-zh")
+                else sorted(LANGUAGES),
+            }
+            for key in MODELS
+        ],
+    }
 
 
 @app.post("/align")
-async def align(file: UploadFile = File(...), transcript: str = Form(...),
-                language: str = Form("auto"), model: str | None = Form(None),
-                segments_json: str | None = Form(None),
-                start: float | None = Form(None), end: float | None = Form(None)):
+async def align(
+    file: Annotated[UploadFile, File()],
+    transcript: Annotated[str, Form()],
+    language: Annotated[str, Form()] = "auto",
+    model: Annotated[str | None, Form()] = None,
+    segments_json: Annotated[str | None, Form()] = None,
+    start: Annotated[float | None, Form()] = None,
+    end: Annotated[float | None, Form()] = None,
+) -> dict:
     if not transcript.strip():
         raise HTTPException(status_code=422, detail="Empty transcript")
     async with gate:
@@ -298,10 +387,7 @@ async def align(file: UploadFile = File(...), transcript: str = Form(...),
                         duration = f.getnframes() / f.getframerate()
                     if duration > 38:
                         raise ValueError("Long audio requires timestamped ASR segments")
-                    segments_json = json.dumps([{"start": start or 0.0,
-                                                 "end": end or duration,
-                                                 "text": transcript}])
-                return await asyncio.to_thread(run_alignment, source, transcript,
-                                               language, model, segments_json)
+                    segments_json = json.dumps([{"start": start or 0.0, "end": end or duration, "text": transcript}])
+                return await asyncio.to_thread(run_alignment, source, transcript, language, model, segments_json)
         except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired) as err:
             raise HTTPException(status_code=422, detail=str(err)) from err

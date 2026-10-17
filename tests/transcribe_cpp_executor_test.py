@@ -1,4 +1,7 @@
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
+
+import pytest
 
 from speaches.config import Config
 from speaches.executors.shared.registry import ExecutorRegistry
@@ -43,14 +46,18 @@ def test_transcribe_registry_prefers_q8_0(monkeypatch, tmp_path) -> None:
     assert selected == q8
 
 
-def test_transcribe_registry_can_prefer_q6_without_changing_default(monkeypatch, tmp_path):
+def test_transcribe_registry_can_prefer_q6_without_changing_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     from speaches.executors import transcribe_cpp
+
     q6 = tmp_path / "model-Q6_K.gguf"
     q8 = tmp_path / "model-Q8_0.gguf"
     q6.touch()
     q8.touch()
     monkeypatch.setattr(
-        transcribe_cpp, "list_model_files",
+        transcribe_cpp,
+        "list_model_files",
         lambda _model_id, _pattern="**/*": iter([q8, q6]),
         raising=False,
     )
@@ -154,7 +161,7 @@ def test_transcribe_manager_runs_model_and_returns_verbose_json(monkeypatch) -> 
 
     fake_model = SimpleNamespace(
         arch="parakeet",
-        capabilities=SimpleNamespace(languages=("fr-FR",)),
+        capabilities=SimpleNamespace(languages=("fr-FR",), max_timestamp_kind="word"),
         session=lambda: FakeSession(),
     )
     manager = transcribe_cpp.TranscribeCppModelManager(ttl=120)
@@ -218,21 +225,19 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
         def __exit__(self, *_args):
             return None
 
-        def run_batch(self, pcms, **kwargs):
-            calls.append(([len(pcm) for pcm in pcms], kwargs))
-            return [
-                SimpleNamespace(
-                    text=text,
-                    language=None,
-                    segments=(SimpleNamespace(text=text, t0_ms=0, t1_ms=1000),),
-                    words=(SimpleNamespace(text=text, t0_ms=0, t1_ms=500),),
-                )
-                for text in outputs
-            ]
+        def run(self, pcm, **kwargs):
+            calls.append((len(pcm), kwargs))
+            text = outputs[len(calls) - 1]
+            return SimpleNamespace(
+                text=text,
+                language=None,
+                segments=(SimpleNamespace(text=text, t0_ms=0, t1_ms=1000),),
+                words=(SimpleNamespace(text=text, t0_ms=0, t1_ms=500),),
+            )
 
     fake_model = SimpleNamespace(
         arch="qwen3_asr",
-        capabilities=SimpleNamespace(languages=()),
+        capabilities=SimpleNamespace(languages=(), max_timestamp_kind="none"),
         session=lambda: FakeSession(),
     )
     manager = transcribe_cpp.TranscribeCppModelManager(ttl=120)
@@ -255,7 +260,9 @@ def test_qwen_long_audio_is_chunked_and_offsets_are_restored(monkeypatch) -> Non
     )
 
     assert calls == [
-        ([300, 300, 50], {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"})
+        (300, {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"}),
+        (300, {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"}),
+        (50, {"language": None, "timestamps": "none", "prompt": "Kenny Vago, Emma de Foucaud"}),
     ]
     assert response.text == "A B C"
     assert response.segments is not None
@@ -270,8 +277,8 @@ def test_timestamp_mode_disables_native_timestamps_for_qwen() -> None:
 
     from speaches.executors import transcribe_cpp
 
-    qwen = SimpleNamespace(arch="qwen3_asr")
-    nemotron = SimpleNamespace(arch="parakeet")
+    qwen = SimpleNamespace(arch="qwen3_asr", capabilities=SimpleNamespace(max_timestamp_kind="none"))
+    nemotron = SimpleNamespace(arch="parakeet", capabilities=SimpleNamespace(max_timestamp_kind="word"))
     assert transcribe_cpp.resolve_timestamp_mode(qwen, ["word", "segment"]) == "none"
     assert transcribe_cpp.resolve_timestamp_mode(nemotron, ["word", "segment"]) == "word"
     assert transcribe_cpp.resolve_timestamp_mode(nemotron, ["segment"]) == "segment"
@@ -333,7 +340,7 @@ def test_streaming_uses_native_stream_and_emits_committed_deltas(monkeypatch) ->
     )
     fake_model = SimpleNamespace(
         arch="parakeet",
-        capabilities=SimpleNamespace(languages=("fr-FR",), supports_streaming=True),
+        capabilities=SimpleNamespace(languages=("fr-FR",), supports_streaming=True, max_timestamp_kind="word"),
         session=lambda: FakeSession(),
     )
     manager = transcribe_cpp.TranscribeCppModelManager(ttl=120)
