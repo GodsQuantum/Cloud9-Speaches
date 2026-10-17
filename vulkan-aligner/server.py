@@ -1,7 +1,8 @@
-"""Cloud9 Vulkan-only CTC forced alignment API, backed by upstream CrispASR.
+"""Strict acoustic forced alignment backed by a platform-native CrispASR binary.
 
-Model weights live in the shared read-only NVMe registry. Per-request subprocess
-keeps ggml Vulkan contexts isolated; no fabricated word boundaries or CPU fallback.
+Production Cloud9 remains on Vulkan; installers may select CPU, CUDA or Metal
+when an appropriate upstream binary and driver are supplied. No fabricated
+word boundaries, inferred backend availability or automatic timestamp fallback.
 """
 from __future__ import annotations
 import asyncio
@@ -9,6 +10,8 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
+import sys
 import re
 import subprocess
 import tempfile
@@ -21,8 +24,25 @@ try:
 except ImportError:
     from alignment_groups import groups_for_alignment
 
-ROOT = Path(os.getenv("ALIGN_MODEL_ROOT", "/ai-models/audio/asr/aligners"))
-BIN = os.getenv("CRISPASR_BIN", "/opt/crispasr/bin/crispasr")
+_default_model_root = (
+    Path("/ai-models/audio/asr/aligners") if Path("/ai-models").exists()
+    else Path(os.getenv("XDG_CACHE_HOME") or (Path.home() / ".cache")) / "cloud9-speaches" / "aligners"
+)
+ROOT = Path(os.getenv("ALIGN_MODEL_ROOT", str(_default_model_root)))
+BIN = os.getenv("CRISPASR_BIN") or shutil.which("crispasr") or (
+    "/opt/crispasr/bin/crispasr" if Path("/opt/crispasr/bin/crispasr").is_file()
+    else "crispasr.exe" if os.name == "nt" else "crispasr"
+)
+VALID_COMPUTE_BACKENDS = frozenset({"auto", "cpu", "cuda", "vulkan", "metal"})
+
+
+def selected_compute_backend() -> str:
+    """Configure an upstream CrispASR backend without falsely probing GPU readiness."""
+    backend = os.getenv("CLOUD9_CTC_BACKEND", "vulkan").strip().lower()
+    if backend not in VALID_COMPUTE_BACKENDS:
+        raise ValueError(f"Invalid CLOUD9_CTC_BACKEND={backend!r}; choose auto/cpu/cuda/vulkan/metal")
+    return backend
+
 LANGUAGES = frozenset("bg cs da de el en es et fi fr hr hu it lt lv mt nl pl pt ro ru sk sl sv uk".split())
 MODELS = {
     "fastconformer-fr-q4": ("cstr--stt-fr-fastconformer-hybrid-ctc-large-GGUF",
@@ -34,7 +54,7 @@ MODELS = {
     "canary-ctc-multilingual-q4": ("cstr--canary-ctc-aligner-GGUF",
                                     "canary-ctc-aligner-q4_k.gguf"),
 }
-app = FastAPI(title="Cloud9 Vulkan CTC Aligner", version="1.0.0")
+app = FastAPI(title="Cloud9 Native CTC Aligner", version="1.0.0")
 gate = asyncio.Semaphore(1)
 
 
@@ -178,7 +198,7 @@ def run_alignment(wav_path: Path, text: str, language: str,
                 raise ValueError(f"Empty audio window {group_idx}")
             directory, filename = MODELS[chosen]
             # All intermediates stay in RAM and are deleted after each request.
-            with tempfile.TemporaryDirectory(prefix="cloud9-ctc-", dir="/tmp") as tempdir:
+            with tempfile.TemporaryDirectory(prefix="cloud9-ctc-") as tempdir:
                 chunk = Path(tempdir) / "chunk.wav"
                 text_file = Path(tempdir) / "reference.txt"
                 result_file = Path(tempdir) / "alignment.json"
@@ -188,7 +208,7 @@ def run_alignment(wav_path: Path, text: str, language: str,
                     target.setframerate(16000)
                     target.writeframes(samples)
                 text_file.write_text(group["text"], encoding="utf8")
-                args = [BIN, "--align-only", "--gpu-backend", "vulkan",
+                args = [BIN, "--align-only", "--gpu-backend", selected_compute_backend(),
                         "-am", str(ROOT / directory / filename),
                         "-f", str(chunk), "--text-file", str(text_file),
                         "--align-format", "json", "--align-granularity", "word",
@@ -198,12 +218,12 @@ def run_alignment(wav_path: Path, text: str, language: str,
                 # child with a private loader; never upgrade the app-wide libc.
                 loader = Path("/opt/ctc-glibc/ld-linux-x86-64.so.2")
                 child_env = os.environ.copy()
-                if loader.is_file():
+                if sys.platform.startswith("linux") and loader.is_file():
                     args = [str(loader), "--library-path",
                             "/opt/ctc-glibc:/opt/crispasr/lib:/usr/lib/x86_64-linux-gnu",
                             *args]
                     child_env.pop("LD_LIBRARY_PATH", None)
-                else:
+                elif sys.platform.startswith("linux") and Path("/opt/crispasr/lib").is_dir():
                     child_env["LD_LIBRARY_PATH"] = "/opt/crispasr/lib"
                 proc = subprocess.run(args, capture_output=True, text=True,
                                       timeout=300, check=False, env=child_env)
@@ -223,7 +243,8 @@ def run_alignment(wav_path: Path, text: str, language: str,
     if len(rows) != len(acoustic_tokens(text)):
         raise ValueError("Full transcript is not acoustically aligned")
     return {"word_segments": rows,
-            "quality": {"backend": "vulkan", "method": "crispasr-ctc-forced-alignment",
+            "quality": {"backend": selected_compute_backend(), "backend_selection": "configured",
+                        "method": "crispasr-ctc-forced-alignment",
                         "interpolation": False, "model": chosen, "language": detected,
                         "alignment_chunks": len(groups), "frame_confidence_available": False,
                         "accuracy_certified": False, "audio_duration": duration,
@@ -232,7 +253,8 @@ def run_alignment(wav_path: Path, text: str, language: str,
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "backend": "vulkan", "models": [
+    return {"status": "ok", "backend": selected_compute_backend(),
+            "backend_selection": "configured_not_hardware_probed", "models": [
         {"id": name, "available": (ROOT / directory / filename).is_file()}
         for name, (directory, filename) in MODELS.items()]}
 
@@ -260,7 +282,7 @@ async def align(file: UploadFile = File(...), transcript: str = Form(...),
         raise HTTPException(status_code=422, detail="Empty transcript")
     async with gate:
         try:
-            with tempfile.TemporaryDirectory(prefix="cloud9-align-request-", dir="/tmp") as directory:
+            with tempfile.TemporaryDirectory(prefix="cloud9-align-request-") as directory:
                 source = Path(directory) / "input.wav"
                 total = 0
                 with source.open("wb") as f:
