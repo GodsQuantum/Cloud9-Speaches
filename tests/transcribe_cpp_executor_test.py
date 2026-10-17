@@ -43,6 +43,21 @@ def test_transcribe_registry_prefers_q8_0(monkeypatch, tmp_path) -> None:
     assert selected == q8
 
 
+def test_transcribe_registry_can_prefer_q6_without_changing_default(monkeypatch, tmp_path):
+    from speaches.executors import transcribe_cpp
+    q6 = tmp_path / "model-Q6_K.gguf"
+    q8 = tmp_path / "model-Q8_0.gguf"
+    q6.touch()
+    q8.touch()
+    monkeypatch.setattr(
+        transcribe_cpp, "list_model_files",
+        lambda _model_id, _pattern="**/*": iter([q8, q6]),
+        raising=False,
+    )
+    monkeypatch.setenv("CLOUD9_TRANSCRIBE_CPP_PREFERRED_QUANT", "Q6_K")
+    assert transcribe_cpp.transcribe_cpp_model_registry.get_model_files("owner/model") == q6
+
+
 def test_transcribe_manager_loads_selected_gguf_with_vulkan(monkeypatch, tmp_path) -> None:
     import sys
     from types import SimpleNamespace

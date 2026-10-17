@@ -1,0 +1,4 @@
+# Preserve the qualified Speaches CUDA/ROCm/Vulkan runtime, update our tested backend only.
+FROM cloud9/speaches:longform-20261016-v3
+COPY --chown=ubuntu:ubuntu src/speaches/executors/cloud9_word_alignment.py src/speaches/executors/cloud9_alignment_groups.py src/speaches/executors/cloud9_longform.py src/speaches/executors/transcribe_cpp.py /home/ubuntu/speaches/src/speaches/executors/
+RUN python -m py_compile /home/ubuntu/speaches/src/speaches/executors/cloud9_word_alignment.py /home/ubuntu/speaches/src/speaches/executors/cloud9_alignment_groups.py /home/ubuntu/speaches/src/speaches/executors/cloud9_longform.py /home/ubuntu/speaches/src/speaches/executors/transcribe_cpp.py

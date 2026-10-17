@@ -9,6 +9,7 @@ import huggingface_hub
 from speaches.api_types import Model, TimestampGranularities
 from speaches.audio import Audio
 from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
+from speaches.executors.cloud9_longform import profile_for_arch, run_longform
 from speaches.executors.shared.base_model_manager import BaseModelManager
 from speaches.executors.shared.handler_protocol import (
     NonStreamingTranscriptionResponse,
@@ -66,7 +67,14 @@ class TranscribeCppModelRegistry(ModelRegistry[Model, Path]):
 
     def get_model_files(self, model_id: str) -> Path:
         files = [path for path in list_model_files(model_id, "**/*.gguf") if path.is_file()]
-        for suffix in ("-Q8_0.gguf", "-F16.gguf", "-BF16.gguf", ".gguf"):
+        # A preferred quant is explicit and reversible. Default remains the
+        # historical Q8_0; on Cloud9 choose Q6_K for the calibrated Turbo.
+        preferred = os.getenv("CLOUD9_TRANSCRIBE_CPP_PREFERRED_QUANT", "Q8_0").strip().upper()
+        if preferred not in {"Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0", "F16", "BF16"}:
+            raise ValueError(f"Unsupported preferred GGUF quantization: {preferred}")
+        suffixes = [f"-{preferred}.gguf", "-Q8_0.gguf", "-Q6_K.gguf",
+                    "-Q5_K_M.gguf", "-Q4_K_M.gguf", "-F16.gguf", "-BF16.gguf"]
+        for suffix in dict.fromkeys(suffixes):
             match = next((path for path in files if path.name.endswith(suffix)), None)
             if match is not None:
                 return match
@@ -197,13 +205,17 @@ class TranscribeCppModelManager(BaseModelManager):
             language = resolve_language_hint(model, request.language)
             timestamps = resolve_timestamp_mode(model, request.timestamp_granularities)
             with model.session() as session:
-                if getattr(model, "arch", "") == "qwen3_asr" and request.audio.duration > 30.0:
-                    result = run_qwen_chunked(
+                longform_profile = profile_for_arch(
+                    getattr(model, "arch", ""), request.audio.duration
+                )
+                if longform_profile is not None:
+                    result = run_longform(
                         session,
                         request.audio.data,
                         sample_rate=request.audio.sample_rate,
                         language=language,
                         timestamps=timestamps,
+                        profile=longform_profile,
                         prompt=request.prompt,
                     )
                 else:
@@ -317,6 +329,7 @@ def optionally_align_words(result: Any, *, request: Any, language: str | None) -
         transcript=result.text,
         language=(request.language or language or "").split("-", 1)[0].lower(),
         endpoint=endpoint,
+        segments=getattr(result, "segments", None),
     )
     segments = tuple(getattr(result, "segments", ()) or ())
     if not native_valid or not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
@@ -388,11 +401,13 @@ def transcribe_result_to_response(
 
 
 def resolve_timestamp_mode(model: Any, requested_granularities: TimestampGranularities) -> str:
-    if getattr(model, "arch", "") == "qwen3_asr":
-        return "none"
-    if "word" in requested_granularities:
+    """Respect the decoder's timestamp contract, then acoustically align if requested."""
+    supported = getattr(getattr(model, "capabilities", None), "max_timestamp_kind", "none")
+    if supported == "word" and "word" in requested_granularities:
         return "word"
-    if "segment" in requested_granularities:
+    if supported in ("word", "segment") and (
+        "segment" in requested_granularities or "word" in requested_granularities
+    ):
         return "segment"
     return "none"
 
