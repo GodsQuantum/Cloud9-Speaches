@@ -8,8 +8,8 @@ import huggingface_hub
 
 from speaches.api_types import Model, TimestampGranularities
 from speaches.audio import Audio
-from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
 from speaches.executors.cloud9_longform import profile_for_arch, run_longform
+from speaches.executors.cloud9_word_alignment import WordAlignmentError, align_words, native_word_timings_valid
 from speaches.executors.shared.base_model_manager import BaseModelManager
 from speaches.executors.shared.handler_protocol import (
     NonStreamingTranscriptionResponse,
@@ -72,8 +72,15 @@ class TranscribeCppModelRegistry(ModelRegistry[Model, Path]):
         preferred = os.getenv("CLOUD9_TRANSCRIBE_CPP_PREFERRED_QUANT", "Q8_0").strip().upper()
         if preferred not in {"Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0", "F16", "BF16"}:
             raise ValueError(f"Unsupported preferred GGUF quantization: {preferred}")
-        suffixes = [f"-{preferred}.gguf", "-Q8_0.gguf", "-Q6_K.gguf",
-                    "-Q5_K_M.gguf", "-Q4_K_M.gguf", "-F16.gguf", "-BF16.gguf"]
+        suffixes = [
+            f"-{preferred}.gguf",
+            "-Q8_0.gguf",
+            "-Q6_K.gguf",
+            "-Q5_K_M.gguf",
+            "-Q4_K_M.gguf",
+            "-F16.gguf",
+            "-BF16.gguf",
+        ]
         for suffix in dict.fromkeys(suffixes):
             match = next((path for path in files if path.name.endswith(suffix)), None)
             if match is not None:
@@ -205,9 +212,7 @@ class TranscribeCppModelManager(BaseModelManager):
             language = resolve_language_hint(model, request.language)
             timestamps = resolve_timestamp_mode(model, request.timestamp_granularities)
             with model.session() as session:
-                longform_profile = profile_for_arch(
-                    getattr(model, "arch", ""), request.audio.duration
-                )
+                longform_profile = profile_for_arch(getattr(model, "arch", ""), request.audio.duration)
                 if longform_profile is not None:
                     result = run_longform(
                         session,
@@ -406,9 +411,7 @@ def resolve_timestamp_mode(model: Any, requested_granularities: TimestampGranula
     supported = getattr(getattr(model, "capabilities", None), "max_timestamp_kind", "none")
     if supported == "word" and "word" in requested_granularities:
         return "word"
-    if supported in ("word", "segment") and (
-        "segment" in requested_granularities or "word" in requested_granularities
-    ):
+    if supported in ("word", "segment") and ("segment" in requested_granularities or "word" in requested_granularities):
         return "segment"
     return "none"
 

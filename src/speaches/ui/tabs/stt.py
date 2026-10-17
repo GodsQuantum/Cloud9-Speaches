@@ -124,8 +124,15 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
                     yield previous_transcription
             else:
                 result = await audio_task(
-                    http_client, file_path, endpoint, response_format, temperature,
-                    model, language, acoustic, alignment_model,
+                    http_client,
+                    file_path,
+                    endpoint,
+                    response_format,
+                    temperature,
+                    model,
+                    language,
+                    acoustic,
+                    alignment_model,
                 )
                 yield result
         except Exception as e:
@@ -148,12 +155,20 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
                 info="Requires transcribe + verbose_json + Stream off; no interpolated timestamps.",
             )
             align_model_dropdown = gr.Dropdown(
-                choices=["auto", "fastconformer-fr-q4", "fastconformer-en-q4",
-                         "wav2vec2-zh-q4", "canary-ctc-multilingual-q4"],
-                label="Acoustic alignment model", value="auto",
+                choices=[
+                    "auto",
+                    "fastconformer-fr-q4",
+                    "fastconformer-en-q4",
+                    "wav2vec2-zh-q4",
+                    "canary-ctc-multilingual-q4",
+                ],
+                label="Acoustic alignment model",
+                value="auto",
             )
             language_dropdown = gr.Dropdown(
-                choices=["auto", "fr", "en", "zh"], value="auto", label="Speech language",
+                choices=["auto", "fr", "en", "zh"],
+                value="auto",
+                label="Speech language",
             )
         button = gr.Button("Generate")
 

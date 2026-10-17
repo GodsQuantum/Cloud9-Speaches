@@ -4,15 +4,15 @@ Use this for decoder architectures that have a shorter *usable* length than
 their advertised input length. No synthetic per-word acoustic timestamps.
 The same tested algorithm is shared with AutoSubs GPU worker.
 """
+
 from __future__ import annotations
 
-import math
-import os
-import re
-import unicodedata
 from dataclasses import dataclass
+from itertools import pairwise
+import os
 from types import SimpleNamespace
 from typing import Any
+import unicodedata
 
 import numpy as np
 
@@ -43,10 +43,7 @@ def profile_for_arch(arch: str, duration: float, *, force_all: bool = False) -> 
         "voxtral": ChunkProfile(30.0, 0.0),
         "granite": ChunkProfile(30.0, 0.0),
     }
-    if force_all or override == "all":
-        profile = profiles.get(arch, ChunkProfile(30.0, 0.0))
-    else:
-        profile = profiles.get(arch)
+    profile = profiles.get(arch, ChunkProfile(30.0, 0.0)) if force_all or override == "all" else profiles.get(arch)
     if profile is None or duration <= profile.window_seconds:
         return None
     return profile
@@ -61,7 +58,7 @@ def _quiet_boundary(samples: np.ndarray, sample_rate: int, desired: int, radius:
     best_energy = float("inf")
     # Restrict to 100 ms aligned windows; avoid picking a zero-crossing as silence.
     for pos in range(start, end - frame + 1, max(1, frame // 2)):
-        data = np.asarray(samples[pos:pos + frame], dtype=np.float32)
+        data = np.asarray(samples[pos : pos + frame], dtype=np.float32)
         rms = float(np.sqrt(np.mean(data * data)))
         score = rms + abs(pos - desired) / sample_rate * 0.004
         if score < best_energy:
@@ -100,7 +97,7 @@ def chunk_windows(audio: np.ndarray, sample_rate: int, profile: ChunkProfile) ->
     # Invariant: cover complete input without silent gaps.
     if windows[0][0] != 0 or windows[-1][1] != len(audio):
         raise ValueError("Longform audio coverage incomplete")
-    for left, right in zip(windows, windows[1:]):
+    for left, right in pairwise(windows):
         if right[0] > left[1] or right[0] <= left[0]:
             raise ValueError("Longform audio coverage/monotonicity invalid")
     return windows
@@ -133,9 +130,13 @@ def overlap_drop(previous: str, current: str, max_tokens: int = 22) -> int:
 
 
 def run_longform(
-    session: Any, samples: np.ndarray, *,
-    sample_rate: int, language: str | None,
-    timestamps: str, profile: ChunkProfile,
+    session: Any,
+    samples: np.ndarray,
+    *,
+    sample_rate: int,
+    language: str | None,
+    timestamps: str,
+    profile: ChunkProfile,
     prompt: str | None = None,
 ) -> Any:
     windows = chunk_windows(samples, sample_rate, profile)
@@ -145,8 +146,10 @@ def run_longform(
     seam_checks = []
     for index, (start, end) in enumerate(windows):
         result = session.run(
-            samples[start:end], language=language,
-            timestamps=timestamps, prompt=prompt,
+            samples[start:end],
+            language=language,
+            timestamps=timestamps,
+            prompt=prompt,
         )
         words_text = str(getattr(result, "text", "") or "").strip()
         # Never silently return partial long-form audio for a non-silent chunk.
@@ -174,25 +177,27 @@ def run_longform(
         )
         if native_time_valid and cut == 0:
             segments.extend(
-                SimpleNamespace(text=s.text, t0_ms=s.t0_ms + offset_ms,
-                                t1_ms=s.t1_ms + offset_ms)
-                for s in native
+                SimpleNamespace(text=s.text, t0_ms=s.t0_ms + offset_ms, t1_ms=s.t1_ms + offset_ms) for s in native
             )
         elif remaining:
             segments.append(SimpleNamespace(text=remaining, t0_ms=t0, t1_ms=t1))
         if native_time_valid and cut == 0:
             word_rows.extend(
-                SimpleNamespace(text=w.text, t0_ms=w.t0_ms + offset_ms,
-                                t1_ms=w.t1_ms + offset_ms)
+                SimpleNamespace(text=w.text, t0_ms=w.t0_ms + offset_ms, t1_ms=w.t1_ms + offset_ms)
                 for w in (getattr(result, "words", ()) or ())
             )
     text = " ".join(pieces).strip()
     if not text:
         raise RuntimeError("ASR returned no long-form transcript")
     return SimpleNamespace(
-        text=text, segments=tuple(segments),
+        text=text,
+        segments=tuple(segments),
         words=tuple(word_rows),
         language=language,
-        longform={"segments": len(windows), "seams": seam_checks,
-                  "covered_samples": len(samples), "overlap_seconds": profile.overlap_seconds},
+        longform={
+            "segments": len(windows),
+            "seams": seam_checks,
+            "covered_samples": len(samples),
+            "overlap_seconds": profile.overlap_seconds,
+        },
     )

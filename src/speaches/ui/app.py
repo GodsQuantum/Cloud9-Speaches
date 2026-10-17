@@ -1,8 +1,8 @@
 import gradio as gr
 
 from speaches.config import Config
-from speaches.ui.tabs.audio_chat import create_audio_chat_tab
 from speaches.ui.tabs.alignment import create_alignment_tab
+from speaches.ui.tabs.audio_chat import create_audio_chat_tab
 from speaches.ui.tabs.stt import create_stt_tab
 from speaches.ui.tabs.tts import create_tts_tab
 

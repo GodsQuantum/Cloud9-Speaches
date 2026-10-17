@@ -3,6 +3,7 @@
 Never split the transcript by guessed average words-per-second: use ASR segments
 with real media offsets, or refuse long inputs without them.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,8 +32,11 @@ def _key(text: str) -> list[str]:
 
 
 def groups_for_alignment(
-    transcript: str, audio_duration: float, raw_segments: str | None,
-    *, max_chunk_seconds: float = 38.0,
+    transcript: str,
+    audio_duration: float,
+    raw_segments: str | None,
+    *,
+    max_chunk_seconds: float = 38.0,
 ) -> list[dict]:
     if not transcript.strip() or not math.isfinite(audio_duration) or audio_duration <= 0:
         raise ValueError("nonempty transcript and finite audio duration required")
@@ -51,15 +55,22 @@ def groups_for_alignment(
     prev_start = -1.0
     for i, row in enumerate(segments):
         if not isinstance(row, dict):
-            raise ValueError(f"segment {i} is not a mapping")
+            raise ValueError(f"segment {i} is not a mapping")  # noqa: TRY004 - API input validation
         try:
             a = float(row["start"])
             b = float(row["end"])
             text = str(row["text"]).strip()
         except (TypeError, ValueError, KeyError) as exc:
             raise ValueError(f"invalid segment {i}") from exc
-        if (not text or not math.isfinite(a) or not math.isfinite(b)
-                or a < 0 or a < prev_start or b <= a or b > audio_duration + 0.08):
+        if (
+            not text
+            or not math.isfinite(a)
+            or not math.isfinite(b)
+            or a < 0
+            or a < prev_start
+            or b <= a
+            or b > audio_duration + 0.08
+        ):
             raise ValueError(f"invalid ASR segment bounds/text at {i}")
         b = min(b, audio_duration)
         if group is None and out and a < out[-1]["end"]:
@@ -83,9 +94,7 @@ def groups_for_alignment(
     if group is not None:
         out.append(group)
     if _key(" ".join(g["text"] for g in out)) != _key(transcript):
-        raise ValueError(
-            "ASR segments and final transcript differ: refusing to align possibly omitted words"
-        )
+        raise ValueError("ASR segments and final transcript differ: refusing to align possibly omitted words")
     if len(out) > 1 and out[-1]["end"] < audio_duration - 10:
         raise ValueError("ASR segments end before media ends: likely truncated transcript")
     return out
