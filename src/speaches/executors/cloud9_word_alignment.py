@@ -7,6 +7,7 @@ timings by spacing words equally across a segment.
 from __future__ import annotations
 
 from io import BytesIO
+import json
 import math
 import os
 from types import SimpleNamespace
@@ -15,7 +16,7 @@ from typing import Any
 import httpx
 import soundfile as sf
 
-MAX_ALIGN_SECONDS = 300.0  # larger podcasts must be chunked by AutoSubs
+MAX_ALIGN_SECONDS = 21600.0  # six hours, with acoustic chunk offsets required
 
 
 class WordAlignmentError(RuntimeError):
@@ -25,6 +26,40 @@ class WordAlignmentError(RuntimeError):
 def lexical_key(value: str) -> str:
     """Compare orthographic words without altering the published transcript."""
     return value.strip().strip(' .,!?;:«»()[]{}"“”').casefold()
+
+
+def spoken_tokens(transcript: str) -> list[str]:
+    """Track CJK ideographs individually and attach punctuation to spoken words."""
+    result: list[str] = []
+    prefix = ""
+    for piece in transcript.split():
+        buffer = ""
+        for ch in piece:
+            if 0x3400 <= ord(ch) <= 0x9FFF:
+                if buffer:
+                    result.append(prefix + buffer)
+                    prefix = ""
+                    buffer = ""
+                result.append(prefix + ch)
+                prefix = ""
+            elif ch in "，。！？、；：" and result:
+                if buffer:
+                    result.append(prefix + buffer)
+                    prefix = ""
+                    buffer = ""
+                result[-1] += ch
+            else:
+                buffer += ch
+        if buffer and any(ch.isalnum() for ch in buffer):
+            result.append(prefix + buffer)
+            prefix = ""
+        elif buffer and result:
+            result[-1] += buffer
+        else:
+            prefix += buffer
+    if prefix or not result:
+        raise WordAlignmentError("Transcript has no attachable spoken tokens")
+    return result
 
 
 def native_word_timings_valid(words: tuple[Any, ...], *, transcript: str, duration: float) -> bool:
@@ -60,6 +95,7 @@ def align_words(
     transcript: str,
     language: str,
     endpoint: str,
+    segments: Any = None,
 ) -> tuple[SimpleNamespace, ...]:
     """Return actual acoustic per-word timings, or fail explicitly."""
     if not transcript.strip():
@@ -70,7 +106,30 @@ def align_words(
         raise WordAlignmentError("Configured alignment URL must use HTTP(S)")
     duration = float(audio.duration)
     if not math.isfinite(duration) or not 0 < duration <= MAX_ALIGN_SECONDS:
-        raise WordAlignmentError("Audio must be 0-300 seconds; chunk longer recordings first")
+        raise WordAlignmentError("Audio must be 0-21600 seconds")
+
+    form = {"transcript": transcript, "language": language}
+    if duration > 38.0:
+        if not segments:
+            raise WordAlignmentError(
+                "Long audio needs ASR segment offsets; refusing guessed word timing"
+            )
+        groupings = []
+        for idx, seg in enumerate(segments):
+            try:
+                t0 = getattr(seg, "t0_ms", None)
+                t1 = getattr(seg, "t1_ms", None)
+                left = float(t0) / 1000 if t0 is not None else float(seg.start)
+                right = float(t1) / 1000 if t1 is not None else float(seg.end)
+                groupings.append({"start": left, "end": right, "text": seg.text})
+            except (AttributeError, TypeError, ValueError) as exc:
+                raise WordAlignmentError(f"Invalid long-form ASR segment #{idx}") from exc
+        from speaches.executors.cloud9_alignment_groups import groups_for_alignment
+        try:
+            groups_for_alignment(transcript, duration, json.dumps(groupings, ensure_ascii=False))
+        except ValueError as exc:
+            raise WordAlignmentError(f"Unsafe long-form ASR segmentation: {exc}") from exc
+        form["segments_json"] = json.dumps(groupings, ensure_ascii=False)
 
     wav = BytesIO()
     sf.write(wav, audio.data, audio.sample_rate, format="WAV", subtype="PCM_16")
@@ -78,8 +137,8 @@ def align_words(
         response = httpx.post(
             endpoint,
             files={"file": ("speech.wav", wav.getvalue(), "audio/wav")},
-            data={"transcript": transcript, "language": language},
-            timeout=httpx.Timeout(120.0, connect=5.0),
+            data=form,
+            timeout=httpx.Timeout(7200.0, connect=5.0),
         )
         response.raise_for_status()
         payload = response.json()
@@ -89,13 +148,13 @@ def align_words(
     if not isinstance(payload, dict) or not isinstance(payload.get("word_segments"), list):
         raise WordAlignmentError("Forced-alignment response lacks word_segments")
     rows = payload["word_segments"]
-    if len(rows) != len(transcript.split()):
+    expected = spoken_tokens(transcript)
+    if len(rows) != len(expected):
         raise WordAlignmentError(
-            f"Forced alignment incomplete: {len(rows)} words for {len(transcript.split())} transcript tokens"
+            f"Forced alignment incomplete: {len(rows)} words for {len(expected)} spoken tokens"
         )
     words: list[SimpleNamespace] = []
     previous_end = 0.0
-    expected = transcript.split()
     for i, row in enumerate(rows):
         if not isinstance(row, dict) or not isinstance(row.get("word"), str) or not row["word"].strip():
             raise WordAlignmentError(f"Invalid aligned word {i}")
@@ -105,16 +164,19 @@ def align_words(
         try:
             start = float(row["start"])
             end = float(row["end"])
-            score = float(row["score"])
+            # CrispASR Vulkan does not expose frame confidence. Preserve this
+            # uncertainty; never fabricate a score to satisfy a legacy client.
+            score = float(row["score"]) if row.get("score") is not None else None
         except (KeyError, TypeError, ValueError) as exc:
             raise WordAlignmentError(f"Invalid timing or confidence for word {i}") from exc
         if (
-            not all(math.isfinite(v) for v in (start, end, score))
+            not math.isfinite(start)
+            or not math.isfinite(end)
+            or (score is not None and (not math.isfinite(score) or not 0 <= score <= 1))
             or start < 0
             or end <= start
             or end > duration + 0.15
             or start < previous_end - 0.04
-            or not 0 <= score <= 1
         ):
             raise WordAlignmentError(f"Invalid or nonmonotonic word time {i}")
         words.append(SimpleNamespace(text=row["word"], t0_ms=round(start * 1000), t1_ms=round(end * 1000), score=score))
@@ -158,6 +220,7 @@ def optionally_align_whisper_words(response: Any, *, request: Any) -> Any:
         transcript=response.text,
         language=(request.language or response.language or "").split("-", 1)[0].lower(),
         endpoint=endpoint,
+        segments=getattr(response, "segments", None),
     )
     import openai.types.audio
 

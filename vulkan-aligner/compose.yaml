@@ -1,0 +1,34 @@
+services:
+  vulkan-ctc-aligner:
+    image: cloud9/vulkan-ctc-aligner:20261017-zh
+    container_name: vulkan-ctc-aligner
+    restart: unless-stopped
+    user: "1000:1000"
+    group_add: ["991"]
+    read_only: true
+    ports:
+      - "192.168.1.219:8010:8000"
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      ALIGN_MODEL_ROOT: /ai-models/audio/asr/aligners
+      CRISPASR_BIN: /opt/crispasr/bin/crispasr
+      LD_LIBRARY_PATH: /opt/crispasr/lib
+      HOME: /tmp
+    volumes:
+      - /srv/ai-models:/ai-models:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1024m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    shm_size: 512m
+    cpus: 4
+    mem_limit: 4g
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "/opt/python/bin/python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).read()"]
+      interval: 25s
+      timeout: 8s
+      retries: 3
+      start_period: 30s

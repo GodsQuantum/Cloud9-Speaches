@@ -1,0 +1,7 @@
+# Reproducible application-layer update retaining the previously qualified
+# upstream CrispASR Vulkan binary and its read-only model registry.
+FROM cloud9/vulkan-ctc-aligner:20261017
+USER root
+COPY --chown=1000:1000 server.py alignment_groups.py /srv/
+RUN /opt/python/bin/python -m py_compile /srv/server.py /srv/alignment_groups.py
+USER 1000:1000

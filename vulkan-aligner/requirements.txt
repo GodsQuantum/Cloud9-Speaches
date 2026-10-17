@@ -1,0 +1,4 @@
+fastapi==0.120.4
+uvicorn==0.38.0
+python-multipart==0.0.20
+langdetect==1.0.9
