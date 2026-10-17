@@ -81,3 +81,19 @@ bytes on this verification), which caused a disposable docker run to fail
 with "unable to create session key: disk quota exceeded". No host key quotas
 or kernel settings were changed. Our test canary was removed. Avoid extra
 container recreations until keyring quota is addressed separately.
+
+
+## Upstream build provenance and cleanup
+
+CrispASR Vulkan upstream source:
+https://github.com/CrispStrobe/CrispASR.git
+Pinned source commit: 369029c91d90a61d8346b8bbdafe426bfdde76d1
+Qualified local binary SHA256:
+3cf1321ebb417dfbee5470a9629719529e83a429b0e378fca41ee857a03326b9
+
+After release, the local upstream checkout and published Docker archive are
+disposable build products. Retain Docker image cloud9/vulkan-ctc-aligner:20261017-zh
+and vulkan-aligner/docker/runtime/ (43 MiB local binary staging) to rebuild
+or roll back the CTC backend without downloads. They are ignored by Git
+and are not user data. Before updating, clone the pinned upstream revision,
+rebuild and recertify Vulkan binaries.
