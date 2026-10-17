@@ -327,9 +327,10 @@ def optionally_align_words(result: Any, *, request: Any, language: str | None) -
     words = align_words(
         audio=request.audio,
         transcript=result.text,
-        language=(request.language or language or "").split("-", 1)[0].lower(),
+        language=(request.language or language or getattr(result, "language", "") or "").split("-", 1)[0].lower(),
         endpoint=endpoint,
         segments=getattr(result, "segments", None),
+        model=getattr(request, "alignment_model", None),
     )
     segments = tuple(getattr(result, "segments", ()) or ())
     if not native_valid or not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):

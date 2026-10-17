@@ -2,6 +2,7 @@ import gradio as gr
 
 from speaches.config import Config
 from speaches.ui.tabs.audio_chat import create_audio_chat_tab
+from speaches.ui.tabs.alignment import create_alignment_tab
 from speaches.ui.tabs.stt import create_stt_tab
 from speaches.ui.tabs.tts import create_tts_tab
 
@@ -92,6 +93,7 @@ def create_gradio_demo(config: Config) -> gr.Blocks:
 
         create_audio_chat_tab(config, api_key_input)
         create_stt_tab(config, api_key_input)
+        create_alignment_tab(config, api_key_input)
         create_tts_tab(config, api_key_input)
 
     return demo

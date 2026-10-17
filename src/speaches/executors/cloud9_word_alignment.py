@@ -1,7 +1,7 @@
-"""Optional, verified CPU forced-alignment bridge for Cloud9-Speaches.
+"""Strict acoustic alignment via native Vulkan CrispASR or HTTP compatibility.
 
-This calls the *existing* AutoSubs alignment service. It never infers word
-timings by spacing words equally across a segment.
+Never synthesize timestamps or confidence scores; native execution is selected
+with CLOUD9_WORD_ALIGNMENT_URL=internal.
 """
 
 from __future__ import annotations
@@ -10,6 +10,8 @@ from io import BytesIO
 import json
 import math
 import os
+from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 from typing import Any
 
@@ -96,19 +98,22 @@ def align_words(
     language: str,
     endpoint: str,
     segments: Any = None,
+    model: str | None = None,
 ) -> tuple[SimpleNamespace, ...]:
     """Return actual acoustic per-word timings, or fail explicitly."""
     if not transcript.strip():
         raise WordAlignmentError("Cannot align an empty transcript")
     if not language.strip():
         raise WordAlignmentError("Explicit language required for forced alignment")
-    if not endpoint.startswith(("http://", "https://")):
-        raise WordAlignmentError("Configured alignment URL must use HTTP(S)")
+    if endpoint != "internal" and not endpoint.startswith(("http://", "https://")):
+        raise WordAlignmentError("Alignment URL must be internal or HTTP(S)")
     duration = float(audio.duration)
     if not math.isfinite(duration) or not 0 < duration <= MAX_ALIGN_SECONDS:
         raise WordAlignmentError("Audio must be 0-21600 seconds")
 
     form = {"transcript": transcript, "language": language}
+    if model and model not in ("auto", "default"):
+        form["model"] = model
     if duration > 38.0:
         if not segments:
             raise WordAlignmentError(
@@ -134,16 +139,26 @@ def align_words(
     wav = BytesIO()
     sf.write(wav, audio.data, audio.sample_rate, format="WAV", subtype="PCM_16")
     try:
-        response = httpx.post(
-            endpoint,
-            files={"file": ("speech.wav", wav.getvalue(), "audio/wav")},
-            data=form,
-            timeout=httpx.Timeout(7200.0, connect=5.0),
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except (httpx.HTTPError, ValueError) as exc:
-        raise WordAlignmentError("Forced-alignment service unavailable or invalid") from exc
+        if endpoint == "internal":
+            from speaches.executors.cloud9_ctc import run_alignment
+            with tempfile.TemporaryDirectory(prefix="speaches-native-ctc-") as tmp:
+                source = Path(tmp) / "speech.wav"
+                source.write_bytes(wav.getvalue())
+                payload = run_alignment(
+                    source, transcript, language, form.get("model"),
+                    form.get("segments_json"),
+                )
+        else:
+            response = httpx.post(
+                endpoint,
+                files={"file": ("speech.wav", wav.getvalue(), "audio/wav")},
+                data=form,
+                timeout=httpx.Timeout(7200.0, connect=5.0),
+            )
+            response.raise_for_status()
+            payload = response.json()
+    except (httpx.HTTPError, ValueError, RuntimeError, OSError) as exc:
+        raise WordAlignmentError("Forced acoustic alignment failed or unavailable") from exc
 
     if not isinstance(payload, dict) or not isinstance(payload.get("word_segments"), list):
         raise WordAlignmentError("Forced-alignment response lacks word_segments")
@@ -221,6 +236,7 @@ def optionally_align_whisper_words(response: Any, *, request: Any) -> Any:
         language=(request.language or response.language or "").split("-", 1)[0].lower(),
         endpoint=endpoint,
         segments=getattr(response, "segments", None),
+        model=getattr(request, "alignment_model", None),
     )
     import openai.types.audio
 

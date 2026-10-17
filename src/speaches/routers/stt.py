@@ -138,6 +138,7 @@ def transcribe_file(
     # non standard parameters
     hotwords: Annotated[str | None, Form()] = None,
     without_timestamps: Annotated[bool, Form()] = True,
+    alignment_model: Annotated[str | None, Form()] = None,
 ) -> Response | StreamingResponse:
     timestamp_granularities = asyncio.run(get_timestamp_granularities(request))
     if timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES and response_format != "verbose_json":
@@ -166,6 +167,7 @@ def transcribe_file(
         speech_segments=speech_segments,
         vad_options=DEFAULT_VAD_OPTIONS,
         without_timestamps=without_timestamps,
+        alignment_model=alignment_model if alignment_model not in (None, "auto") else None,
     )
     res = transcription_executor.model_manager.handle_transcription_request(transcription_request)
     http_res = transcription_response_to_http_response(res)
