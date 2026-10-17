@@ -97,3 +97,25 @@ and vulkan-aligner/docker/runtime/ (43 MiB local binary staging) to rebuild
 or roll back the CTC backend without downloads. They are ignored by Git
 and are not user data. Before updating, clone the pinned upstream revision,
 rebuild and recertify Vulkan binaries.
+
+
+## Cross-platform backend wiring (18 October 2026)
+
+Source now accepts `CLOUD9_CTC_BACKEND=auto|cpu|cuda|vulkan|metal`
+(for CrispASR CLI) and `TRANSCRIBE_BACKEND=auto|cpu|cuda|vulkan|metal`
+(for transcribe.cpp), with portable temporary directories and a configurable
+`CRISPASR_BIN` absolute path. Cloud9 currently runs Vulkan only; the default
+CTC backend remains Vulkan specifically to avoid changing the qualified
+production path. On native Windows/macOS/Linux installs, the launcher must set
+both variables according to the hardware and its selected binary.
+
+Important: backend *selection* is not backend *certification*. The installer
+must ship suitable precompiled per-OS transcribe.cpp and CrispASR binaries,
+check compiled backend and driver availability, download model weights and
+verify actual inference/CTC timestamps. The health field `backend` reports
+configured preference, not measured device use. A CPU build must be present
+when planning a CPU fallback; upstream Vulkan-only distributions do not
+necessarily fall back when no Vulkan driver is installed. Metal cannot be
+compiled by the Linux Dockerfile, which remains Linux-specific; native macOS
+bundling must use the upstream macOS build. CUDA must be built and tested on
+NVIDIA hardware. Do not claim platform parity from this configuration patch.
