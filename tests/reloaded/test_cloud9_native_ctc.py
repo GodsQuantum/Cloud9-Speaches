@@ -37,13 +37,13 @@ def test_missing_acoustic_word_must_fail():
                                 "Bonjour les amis")
 
 
-@pytest.mark.parametrize("backend", ["auto", "cpu", "cuda", "vulkan", "metal"])
-def test_ctc_backend_selection_all_platforms(monkeypatch, backend):
+@pytest.mark.parametrize(("backend",), ["auto", "cpu", "cuda", "vulkan", "metal"])
+def test_ctc_backend_selection_all_platforms(monkeypatch: pytest.MonkeyPatch, backend: str) -> None:
     monkeypatch.setenv("CLOUD9_CTC_BACKEND", backend.upper())
     assert selected_compute_backend() == backend
 
 
-def test_ctc_backend_rejects_unsupported_names(monkeypatch):
+def test_ctc_backend_rejects_unsupported_names(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLOUD9_CTC_BACKEND", "vulkan-and-guess")
     with pytest.raises(ValueError, match="Invalid CLOUD9_CTC_BACKEND"):
         selected_compute_backend()
