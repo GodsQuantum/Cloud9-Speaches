@@ -36,21 +36,26 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
         response_format: ResponseFormat,
         temperature: float,
         model: str,
+        language: str = "auto",
+        acoustic: bool = False,
+        alignment_model: str = "auto",
     ) -> str:
         try:
             if not file_path:
                 msg = "No audio file provided in audio_task (stt.py). Please record or upload audio."
                 raise APIProxyError(msg, suggestions=["Please record or upload an audio file."])
+            payload = {
+                "model": model,
+                "response_format": response_format,
+                "temperature": temperature,
+            }
+            if language not in ("auto", ""):
+                payload["language"] = language
+            if acoustic:
+                payload["timestamp_granularities[]"] = "word"
+                payload["alignment_model"] = alignment_model
             with Path(file_path).open("rb") as file:  # noqa: ASYNC230
-                response = await http_client.post(
-                    endpoint,
-                    files={"file": file},
-                    data={
-                        "model": model,
-                        "response_format": response_format,
-                        "temperature": temperature,
-                    },
-                )
+                response = await http_client.post(endpoint, files={"file": file}, data=payload)
             response.raise_for_status()
             return response.text
         except Exception as e:
@@ -94,6 +99,9 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
         response_format: ResponseFormat,
         temperature: float,
         stream: bool,
+        language: str,
+        acoustic: bool,
+        alignment_model: str,
         api_key: str,
         request: gr.Request,
     ) -> AsyncGenerator[str]:
@@ -101,6 +109,9 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
             if not file_path:
                 msg = "No audio file provided in whisper_handler (stt.py). Please record or upload audio."
                 raise APIProxyError(msg, suggestions=["Please record or upload an audio file."])
+            if acoustic and (stream or response_format != "verbose_json" or task != "transcribe"):
+                yield "For acoustic word alignment choose: transcribe, verbose_json, Stream off."
+                return
             http_client = http_client_from_gradio_req(request, config, api_key or None)
             endpoint = TRANSCRIPTION_ENDPOINT if task == "transcribe" else TRANSLATION_ENDPOINT
 
@@ -112,7 +123,10 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
                     previous_transcription += transcription
                     yield previous_transcription
             else:
-                result = await audio_task(http_client, file_path, endpoint, response_format, temperature, model)
+                result = await audio_task(
+                    http_client, file_path, endpoint, response_format, temperature,
+                    model, language, acoustic, alignment_model,
+                )
                 yield result
         except Exception as e:
             logger.exception("STT handler error")
@@ -127,6 +141,20 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
         response_format = gr.Dropdown(choices=RESPONSE_FORMATS, label="Response Format", value=DEFAULT_RESPONSE_FORMAT)
         temperature_slider = gr.Slider(minimum=0.0, maximum=1.0, step=0.1, label="Temperature", value=0.0)
         stream_checkbox = gr.Checkbox(label="Stream", value=True)
+        with gr.Accordion("Cloud9 native Vulkan acoustic alignment", open=False):
+            acoustic_checkbox = gr.Checkbox(
+                label="Align every word with FastConformer CTC Vulkan",
+                value=False,
+                info="Requires transcribe + verbose_json + Stream off; no interpolated timestamps.",
+            )
+            align_model_dropdown = gr.Dropdown(
+                choices=["auto", "fastconformer-fr-q4", "fastconformer-en-q4",
+                         "wav2vec2-zh-q4", "canary-ctc-multilingual-q4"],
+                label="Acoustic alignment model", value="auto",
+            )
+            language_dropdown = gr.Dropdown(
+                choices=["auto", "fr", "en", "zh"], value="auto", label="Speech language",
+            )
         button = gr.Button("Generate")
 
         output = gr.Textbox()
@@ -141,6 +169,9 @@ def create_stt_tab(config: Config, api_key_input: gr.Textbox) -> None:
                 response_format,
                 temperature_slider,
                 stream_checkbox,
+                language_dropdown,
+                acoustic_checkbox,
+                align_model_dropdown,
                 api_key_input,
             ],
             output,

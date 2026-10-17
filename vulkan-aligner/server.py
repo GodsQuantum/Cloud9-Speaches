@@ -16,7 +16,10 @@ import unicodedata
 import wave
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from alignment_groups import groups_for_alignment
+try:
+    from speaches.executors.cloud9_alignment_groups import groups_for_alignment
+except ImportError:
+    from alignment_groups import groups_for_alignment
 
 ROOT = Path(os.getenv("ALIGN_MODEL_ROOT", "/ai-models/audio/asr/aligners"))
 BIN = os.getenv("CRISPASR_BIN", "/opt/crispasr/bin/crispasr")
@@ -190,8 +193,20 @@ def run_alignment(wav_path: Path, text: str, language: str,
                         "-f", str(chunk), "--text-file", str(text_file),
                         "--align-format", "json", "--align-granularity", "word",
                         "--align-output", str(result_file)]
+                # The upstream CrispASR Vulkan runtime targets glibc 2.43,
+                # while Speaches runs Ubuntu 24.04/glibc 2.39. Launch only this
+                # child with a private loader; never upgrade the app-wide libc.
+                loader = Path("/opt/ctc-glibc/ld-linux-x86-64.so.2")
+                child_env = os.environ.copy()
+                if loader.is_file():
+                    args = [str(loader), "--library-path",
+                            "/opt/ctc-glibc:/opt/crispasr/lib:/usr/lib/x86_64-linux-gnu",
+                            *args]
+                    child_env.pop("LD_LIBRARY_PATH", None)
+                else:
+                    child_env["LD_LIBRARY_PATH"] = "/opt/crispasr/lib"
                 proc = subprocess.run(args, capture_output=True, text=True,
-                                      timeout=300, check=False)
+                                      timeout=300, check=False, env=child_env)
                 if proc.returncode or not result_file.exists():
                     raise RuntimeError(f"Vulkan CTC alignment failed for chunk {group_idx}")
                 parsed = json.loads(result_file.read_text(encoding="utf8"))

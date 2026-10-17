@@ -1,0 +1,25 @@
+# Deploy native CrispASR Vulkan inside Speaches using tested local images.
+# Build on CT410 with the retained, qualified CrispASR runtime image.
+FROM cloud9/vulkan-ctc-aligner:20261017-zh AS qualified-ctc
+FROM cloud9/speaches:fastconformer-20261017
+USER root
+COPY --from=qualified-ctc /opt/crispasr /opt/crispasr
+# Private glibc for the CrispASR subprocess only (NOT the Python server).
+COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /opt/ctc-glibc/ld-linux-x86-64.so.2
+COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libc.so.6 /opt/ctc-glibc/libc.so.6
+COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libm.so.6 /opt/ctc-glibc/libm.so.6
+COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libmvec.so.1 /opt/ctc-glibc/libmvec.so.1
+COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libpthread.so.0 /opt/ctc-glibc/libpthread.so.0
+COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libdl.so.2 /opt/ctc-glibc/libdl.so.2
+COPY --chown=ubuntu:ubuntu src/speaches/main.py src/speaches/main.py
+COPY --chown=ubuntu:ubuntu src/speaches/executors/shared/handler_protocol.py src/speaches/executors/shared/handler_protocol.py
+COPY --chown=ubuntu:ubuntu src/speaches/routers/stt.py src/speaches/routers/stt.py
+COPY --chown=ubuntu:ubuntu src/speaches/executors/cloud9_word_alignment.py src/speaches/executors/cloud9_word_alignment.py
+COPY --chown=ubuntu:ubuntu src/speaches/executors/transcribe_cpp.py src/speaches/executors/transcribe_cpp.py
+COPY --chown=ubuntu:ubuntu src/speaches/executors/cloud9_ctc.py src/speaches/executors/cloud9_ctc.py
+COPY --chown=ubuntu:ubuntu src/speaches/ui/app.py src/speaches/ui/app.py
+COPY --chown=ubuntu:ubuntu src/speaches/ui/tabs/stt.py src/speaches/ui/tabs/stt.py
+COPY --chown=ubuntu:ubuntu src/speaches/ui/tabs/alignment.py src/speaches/ui/tabs/alignment.py
+RUN uv pip install --python /home/ubuntu/speaches/.venv/bin/python --no-cache langdetect==1.0.9 \
+ && python -m py_compile src/speaches/main.py src/speaches/routers/stt.py src/speaches/executors/cloud9_ctc.py src/speaches/executors/cloud9_word_alignment.py
+USER ubuntu

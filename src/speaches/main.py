@@ -164,6 +164,22 @@ def create_app() -> FastAPI:
 
     app.include_router(chat_router, dependencies=http_dependencies)
     app.include_router(stt_router, dependencies=http_dependencies)
+    # Cloud9 native Vulkan CTC aligner; same Speaches process, API, and auth.
+    if os.getenv("CLOUD9_NATIVE_CTC_ENABLED") == "1":
+        from speaches.executors.cloud9_ctc import (
+            align as cloud9_ctc_align,
+            health as cloud9_ctc_health,
+            models as cloud9_ctc_models,
+        )
+        app.add_api_route("/v1/audio/alignment/align", cloud9_ctc_align, methods=["POST"],
+                          tags=["acoustic-alignment"], dependencies=http_dependencies)
+        app.add_api_route("/v1/audio/alignment/models", cloud9_ctc_models, methods=["GET"],
+                          tags=["acoustic-alignment"], dependencies=http_dependencies)
+        app.add_api_route("/v1/audio/alignment/health", cloud9_ctc_health, methods=["GET"],
+                          tags=["acoustic-alignment"], dependencies=http_dependencies)
+        # Compatibility with AutoSubs' current aligner contract.
+        app.add_api_route("/align", cloud9_ctc_align, methods=["POST"],
+                          include_in_schema=False, dependencies=http_dependencies)
     app.include_router(models_router, dependencies=http_dependencies)
     app.include_router(misc_router, dependencies=http_dependencies)
     app.include_router(realtime_rtc_router, dependencies=http_dependencies)
