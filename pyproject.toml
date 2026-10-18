@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.10",
     "sounddevice>=0.5.2",
     "soundfile>=0.13.1",
+    "langdetect==1.0.9",
     "uvicorn>=0.35.0",
     "aiostream>=0.7.0",
     "cachetools>=6.1.0",
