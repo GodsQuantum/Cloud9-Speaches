@@ -45,3 +45,21 @@ def test_ctc_backend_rejects_unsupported_names(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("CLOUD9_CTC_BACKEND", "vulkan-and-guess")
     with pytest.raises(ValueError, match="Invalid CLOUD9_CTC_BACKEND"):
         selected_compute_backend()
+
+
+def test_native_ctc_deploy_recipe_copies_full_merged_stack() -> None:
+    """A successful source PR must not silently disappear from the Docker image."""
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    dockerfile = (repo / "deploy/cloud9/Dockerfile.native-ctc").read_text(encoding="utf8")
+    required_sources = (
+        "src/speaches/config.py",
+        "src/speaches/executors/cloud9_alignment_groups.py",
+        "src/speaches/executors/cloud9_longform.py",
+        "src/speaches/executors/cloud9_ctc.py",
+        "src/speaches/executors/cloud9_word_alignment.py",
+        "src/speaches/ui/tabs/alignment.py",
+    )
+    for source in required_sources:
+        assert f"COPY --chown=ubuntu:ubuntu {source} {source}" in dockerfile
