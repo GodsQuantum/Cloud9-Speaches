@@ -12,6 +12,9 @@ COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libmvec.so.1 /opt/ctc-glibc/
 COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libpthread.so.0 /opt/ctc-glibc/libpthread.so.0
 COPY --from=qualified-ctc /usr/lib/x86_64-linux-gnu/libdl.so.2 /opt/ctc-glibc/libdl.so.2
 COPY --chown=ubuntu:ubuntu src/speaches/main.py src/speaches/main.py
+COPY --chown=ubuntu:ubuntu src/speaches/config.py src/speaches/config.py
+COPY --chown=ubuntu:ubuntu src/speaches/executors/cloud9_alignment_groups.py src/speaches/executors/cloud9_alignment_groups.py
+COPY --chown=ubuntu:ubuntu src/speaches/executors/cloud9_longform.py src/speaches/executors/cloud9_longform.py
 COPY --chown=ubuntu:ubuntu src/speaches/executors/shared/handler_protocol.py src/speaches/executors/shared/handler_protocol.py
 COPY --chown=ubuntu:ubuntu src/speaches/routers/stt.py src/speaches/routers/stt.py
 COPY --chown=ubuntu:ubuntu src/speaches/executors/cloud9_word_alignment.py src/speaches/executors/cloud9_word_alignment.py
@@ -21,5 +24,5 @@ COPY --chown=ubuntu:ubuntu src/speaches/ui/app.py src/speaches/ui/app.py
 COPY --chown=ubuntu:ubuntu src/speaches/ui/tabs/stt.py src/speaches/ui/tabs/stt.py
 COPY --chown=ubuntu:ubuntu src/speaches/ui/tabs/alignment.py src/speaches/ui/tabs/alignment.py
 RUN uv pip install --python /home/ubuntu/speaches/.venv/bin/python --no-cache langdetect==1.0.9 \
- && python -m py_compile src/speaches/main.py src/speaches/routers/stt.py src/speaches/executors/cloud9_ctc.py src/speaches/executors/cloud9_word_alignment.py
+ && python -m py_compile src/speaches/main.py src/speaches/config.py src/speaches/routers/stt.py src/speaches/executors/cloud9_ctc.py src/speaches/executors/cloud9_alignment_groups.py src/speaches/executors/cloud9_longform.py src/speaches/executors/cloud9_word_alignment.py
 USER ubuntu
