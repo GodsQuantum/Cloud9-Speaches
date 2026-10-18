@@ -50,7 +50,7 @@ jobs:
       - name: Validate native CTC backend selection and strict acoustic contracts
         env:
           PYTHONPATH: src
-        run: python -m pytest -q tests/reloaded/test_cloud9_native_ctc.py
+        run: python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py
       - name: Verify modules compile for the native host platform
         run: python -m compileall -q src/speaches/executors/cloud9_ctc.py src/speaches/executors/cloud9_alignment_groups.py
 
