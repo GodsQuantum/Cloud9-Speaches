@@ -9,7 +9,14 @@ from __future__ import annotations
 import json
 import math
 import re
+from typing import TypedDict
 import unicodedata
+
+
+class AlignmentWindow(TypedDict):
+    start: float
+    end: float
+    text: str
 
 
 def _key(text: str) -> list[str]:
@@ -37,7 +44,7 @@ def groups_for_alignment(
     raw_segments: str | None,
     *,
     max_chunk_seconds: float = 38.0,
-) -> list[dict]:
+) -> list[AlignmentWindow]:
     if not transcript.strip() or not math.isfinite(audio_duration) or audio_duration <= 0:
         raise ValueError("nonempty transcript and finite audio duration required")
     if raw_segments is None or not raw_segments.strip():
@@ -50,8 +57,8 @@ def groups_for_alignment(
     segments = json.loads(raw_segments)
     if not isinstance(segments, list) or not segments:
         raise ValueError("alignment segments must be a nonempty list")
-    out = []
-    group = None
+    out: list[AlignmentWindow] = []
+    group: AlignmentWindow | None = None
     prev_start = -1.0
     for i, row in enumerate(segments):
         if not isinstance(row, dict):
