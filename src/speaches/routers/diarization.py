@@ -6,13 +6,14 @@ from fastapi import APIRouter, Form, HTTPException, Response
 from fastapi.responses import JSONResponse
 import numpy as np
 from pyannote.audio.core.pipeline import Pipeline
-from pyannote.audio.pipelines.speaker_diarization import DiarizeOutput
+from pyannote.core import Annotation
 from pydantic import BaseModel
 import torch
 
 from speaches.audio import Audio
 from speaches.dependencies import AudioFileDependency, ExecutorRegistryDependency
 from speaches.diarization import KnownSpeaker
+from speaches.diarization_compat import extract_diarization_annotation
 from speaches.model_aliases import ModelId
 from speaches.routers.utils import find_executor_for_model_or_raise, get_model_card_data_or_raise
 from speaches.utils import parse_data_url_to_audio
@@ -47,7 +48,7 @@ def _map_to_known_speakers(
     pipeline: Pipeline,
     waveform: torch.Tensor,
     sample_rate: int,
-    diarization: DiarizeOutput,
+    diarization: Annotation,
     known_speakers: list[KnownSpeaker],
 ) -> dict[Hashable, str]:
     from pyannote.audio import Inference
@@ -65,7 +66,7 @@ def _map_to_known_speakers(
 
     # Collect embeddings per diarized speaker across all their turns
     speaker_embeddings: dict[str, list[np.ndarray]] = {}
-    speaker_track_gen = diarization.speaker_diarization.itertracks(yield_label=True)
+    speaker_track_gen = diarization.itertracks(yield_label=True)
     speaker_track_gen = cast("Iterator[tuple[Segment, TrackName, Hashable]]", speaker_track_gen)
     for turn, _, speaker in speaker_track_gen:
         try:
@@ -152,8 +153,7 @@ def diarize_audio(
 
     with executor.model_manager.load_model(model) as pipeline:
         waveform = torch.from_numpy(audio.data).unsqueeze(0).float()
-        diarization = pipeline({"waveform": waveform, "sample_rate": audio.sample_rate})
-        assert isinstance(diarization, DiarizeOutput), f"Expected DiarizeOutput, got {type(diarization)}"
+        diarization = extract_diarization_annotation(pipeline({"waveform": waveform, "sample_rate": audio.sample_rate}))
 
         speaker_mapping: dict[Hashable, str] | None = None
         if known_speakers:
@@ -164,7 +164,7 @@ def diarize_audio(
             except Exception:
                 logger.exception("Failed to map diarized speakers to known speakers, using default labels")
 
-        speaker_track_gen = diarization.speaker_diarization.itertracks(yield_label=True)
+        speaker_track_gen = diarization.itertracks(yield_label=True)
         speaker_track_gen = cast("Iterator[tuple[Segment, TrackName, Hashable]]", speaker_track_gen)
         if response_format == "rttm":
             file_id = audio.name or "audio"

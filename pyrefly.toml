@@ -4,5 +4,6 @@ search-path = [
   "src",
   "packages/speaches-cli/src",
   ".",
+  "packaging/portable",
   "vulkan-aligner",
 ]
