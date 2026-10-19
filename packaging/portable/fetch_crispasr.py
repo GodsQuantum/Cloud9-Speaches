@@ -53,7 +53,8 @@ def acquire(variant: str, folder: Path) -> None:
             raise ValueError("CrispASR source must use pinned GitHub HTTPS endpoint")
         request = urllib.request.Request(url, headers={"User-Agent": "Cloud9-Speaches-Desktop/1.0"})  # noqa: S310
         with urllib.request.urlopen(request, timeout=120) as response, archive.open("wb") as dest:  # noqa: S310
-            shutil.copyfileobj(response, dest)
+            while chunk := response.read(1024 * 1024):
+                dest.write(chunk)
     with archive.open("rb") as stream:
         got = hashlib.file_digest(stream, "sha256").hexdigest()
     if got != sha:

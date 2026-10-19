@@ -70,6 +70,8 @@ def build_candidate() -> Path:
         "language_tags",
         "--collect-all",
         "pyannote.audio",
+        "--collect-data",
+        "safehttpx",
         "--collect-submodules",
         "onnx_asr",
         "--collect-submodules",
