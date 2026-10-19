@@ -72,6 +72,8 @@ def build_candidate() -> Path:
         "pyannote.audio",
         "--collect-data",
         "safehttpx",
+        "--collect-data",
+        "groovy",
         "--collect-submodules",
         "onnx_asr",
         "--collect-submodules",
