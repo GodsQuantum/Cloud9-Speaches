@@ -44,3 +44,36 @@ Apple Developer ID signing, notarization, Gatekeeper or Windows Authenticode.
 These must be certified separately before a stable release.
 
 The existing Cloud9 CT410 Vulkan production image is unchanged.
+
+## Install the verified French model pack (opt-in)
+
+After installing, the model bootstrap downloads 762 MB:
+the official FastConformer French Q4_K GGUF (69,651,168 bytes, CC-BY-4.0)
+and transcribe.cpp Whisper Large-v3-Turbo Q6_K (692,536,896 bytes, MIT).
+To install through the bundled native executable, run:
+
+    Cloud9-Speaches --install-default-models
+    Cloud9-Speaches --install-default-models --model-group aligner
+
+Immutable Hugging Face commits, SHA256 digests and byte sizes are checked
+before declaring installation complete. Models reside only in application
+per-user data, never in the application bundle. The native Hugging Face
+cache is used for the speech recognizer. No compatibility symlinks are made.
+Model bootstrap is never executed silently from the CI smoke checks.
+
+After the model pack is verified, Cloud9-Speaches will discover Q6_K Turbo
+and French FastConformer in the one-click AutoSubs/ScribeWatch pairing UI.
+Real transcription and alignment still require an acoustic sample test.
+
+## Native transcribe.cpp 0.4.0 providers (CPU/Vulkan/Metal)
+
+The portable app now depends on official transcribe-cpp-native 0.4.0 Python
+wheels, not system-level user-installed drivers or Docker. PyInstaller
+collects both the native modules and entry-point metadata so that the
+real native library can load. The native install checker requires a
+CPU backend; Vulkan and Metal are optional and need hardware evaluation.
+Linux x64 and Windows x64 use Vulkan where a loader and driver are present.
+Apple Silicon uses Metal plus CPU; Intel Mac uses CPU. CUDA remains an
+optional provider and cannot be certified until tested with NVIDIA hardware.
+These are backend *capabilities*; an actual GGUF must be downloaded separately
+and a real audio fixture processed before certifying inference performance.
