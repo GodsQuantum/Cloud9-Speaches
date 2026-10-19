@@ -64,6 +64,8 @@ def build_candidate() -> Path:
         "gradio",
         "--collect-all",
         "gradio_client",
+        "--collect-all",
+        "language_tags",
         "--collect-submodules",
         "onnx_asr",
         "--collect-submodules",
