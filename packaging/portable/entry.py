@@ -50,6 +50,7 @@ def configure(port: int) -> Path:
     os.environ["PATH"] = path_entry + os.pathsep + os.getenv("PATH", "")
     os.environ.setdefault("HF_HOME", str(cache / "huggingface"))
     os.environ.setdefault("ALIGN_MODEL_ROOT", str(models / "aligners"))
+    os.environ.setdefault("CLOUD9_NATIVE_CTC_ENABLED", "1")
     os.environ.setdefault("CLOUD9_CTC_BACKEND", "cpu")
     os.environ.setdefault("TRANSCRIBE_BACKEND", "auto")
     os.environ["UVICORN_HOST"] = "127.0.0.1"
