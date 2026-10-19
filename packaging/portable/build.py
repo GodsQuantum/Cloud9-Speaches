@@ -53,6 +53,17 @@ def find_nsis_compiler() -> str:
     raise RuntimeError("NSIS compiler is not available; install the pinned CI tool first")
 
 
+def intel_legacy_collect_flags(target: str) -> list[str]:
+    """SpeechBrain introspects actual .py files; PyInstaller's full data collection supplies them.
+
+    Only Intel macOS imports SpeechBrain through the last supported PyTorch wheel.
+    Other OS dependency trees remain unchanged.
+    """
+    if target == "macos-amd64":
+        return ["--collect-all", "speechbrain"]
+    return []
+
+
 def build_candidate() -> Path:
     target = variant()
     stage = HERE / "dist" / target
@@ -100,6 +111,7 @@ def build_candidate() -> Path:
         "transcribe-cpp",
         "--copy-metadata",
         "transcribe-cpp-native",
+        *intel_legacy_collect_flags(target),
         "--distpath",
         stage,
         "--workpath",
