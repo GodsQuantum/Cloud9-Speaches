@@ -94,7 +94,7 @@ def download_aligner(model: PinnedModel, target: Path) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(f".{target.name}.download.{os.getpid()}")
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": "Cloud9-Speaches-Installer/1.0"})
+        request = urllib.request.Request(url, headers={"User-Agent": "Cloud9-Speaches-Installer/1.0"})  # noqa: S310
         with urllib.request.urlopen(request, timeout=120) as source, temporary.open("xb") as output:  # noqa: S310
             shutil.copyfileobj(source, output, length=1024 * 1024)
         verify_model(temporary, model)
