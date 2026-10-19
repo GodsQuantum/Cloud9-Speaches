@@ -1,0 +1,85 @@
+name: Cloud9-Speaches native portable candidate
+
+on:
+  pull_request:
+    paths:
+      - 'packaging/portable/**'
+      - '.github/workflows/portable-desktop.yml'
+      - 'src/speaches/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-app:
+    name: 'Portable FastAPI+CrispASR / ${{ matrix.os }}'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, macos-15, macos-15-intel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.10.0'
+
+      - name: Install authentic Speaches runtime and PyInstaller into private 3.12 environment
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ] && [ "$(uname -m)" = "x86_64" ]; then
+            # PyTorch stopped publishing Intel macOS wheels after 2.2.x.
+            # Preserve all other pinned runtime dependencies and test the
+            # authentic application against the last Intel wheel pair.
+            uv sync --frozen --no-dev --python 3.12 --no-install-package torch --no-install-package torchaudio
+            uv pip install --python .venv --no-deps "torch==2.2.2" "torchaudio==2.2.2"
+            # PyTorch 2.2.2 was compiled against NumPy 1.x. pyannote 3.x
+            # also imports matplotlib at module load, including the frozen app.
+            uv pip install --python .venv "numpy==1.26.4" "matplotlib==3.9.4"
+            uv run --no-sync python -c "import torch,torchaudio,numpy,matplotlib; assert torch.__version__.startswith('2.2.2'); assert numpy.__version__.startswith('1.26.'); print('INTEL_LEGACY_TORCH_NUMPY_MATPLOTLIB_OK')"
+            uv run --no-sync python -c "import numpy, speaches.audio; assert hasattr(numpy, 'typing'); print('INTEL_NUMPY1_SPEACHES_AUDIO_IMPORT_OK')"
+          else
+            uv sync --frozen --no-dev --python 3.12
+          fi
+          uv pip install --python .venv "pyinstaller==6.22.3" "pytest>=8.4,<9"
+      - name: Ensure packaging Python is correct and test CPU runtime extraction
+        shell: bash
+        run: |
+          uv run --no-sync python -m compileall -q packaging/portable
+          uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py tests/reloaded/test_diarization_compat.py
+          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py
+      - name: Install NSIS from GitHub (no Chocolatey feed)
+        if: runner.os == 'Windows'
+        uses: negrutiu/nsis-install@f3339c88dba6fd08910d5275a943f8f746d94876 # v2
+        with:
+          distro: negrutiu
+          arch: amd64
+
+      - name: Bundle true Cloud9-Speaches FastAPI/Gradio and upstream CrispASR CPU
+        shell: bash
+        run: |
+          uv run --no-sync python packaging/portable/build.py
+      - name: Upload standalone candidate and checksum (unsigned, models download separately)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: 'cloud9-speaches-portable-${{ matrix.os }}'
+          path: |
+            packaging/portable/dist/*/Cloud9-Speaches-*.zip
+            packaging/portable/dist/*/Cloud9-Speaches-*-setup.exe
+            packaging/portable/dist/*/Cloud9-Speaches-*.dmg
+            packaging/portable/dist/*/Cloud9-Speaches-*.sha256
+          if-no-files-found: error
+          retention-days: 10
+
+# An API smoke with model availability checks is NOT acoustic certification.
+# Runtime models are acquired separately with license/hash verification.
+# Windows installer/signing and Apple Developer ID notarization are separate gates.

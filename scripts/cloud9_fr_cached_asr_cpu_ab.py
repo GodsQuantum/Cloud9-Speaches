@@ -10,10 +10,13 @@ import json
 import math
 from pathlib import Path
 import time
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numpy as np
 import soundfile as sf
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 ROOT = Path("/home/ubuntu/.cache/huggingface/hub")
 
@@ -99,7 +102,7 @@ def main() -> None:
         loaded = time.monotonic()
         with engine.session() as session:
             output = session.run(
-                audio,
+                cast("Sequence[float]", audio),
                 language=None if args.engine.startswith("qwen3") else "fr-FR",
                 timestamps="none" if args.engine.startswith("qwen3") else "word",
             )

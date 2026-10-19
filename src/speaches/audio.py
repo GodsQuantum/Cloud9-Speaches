@@ -8,6 +8,7 @@ import threading
 from typing import BinaryIO, Literal, Self, cast
 
 import numpy as np
+import numpy.typing as npt
 import soundfile as sf
 
 logger = logging.getLogger(__name__)
@@ -15,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # NOTE: `signal.resample_poly` **might** be a better option for resampling audio data
 def resample_audio_data(
-    data: np.typing.NDArray[np.float32], sample_rate: int, target_sample_rate: int
-) -> np.typing.NDArray[np.float32]:
+    data: npt.NDArray[np.float32], sample_rate: int, target_sample_rate: int
+) -> npt.NDArray[np.float32]:
     ratio = target_sample_rate / sample_rate
     target_length = int(len(data) * ratio)
     return np.interp(np.linspace(0, len(data), target_length), np.arange(len(data)), data).astype(np.float32)
@@ -56,7 +57,7 @@ def convert_audio_format(
     return converted_audio_bytes_buffer.getvalue()
 
 
-def audio_samples_from_file(file: BinaryIO, sample_rate: int) -> np.typing.NDArray[np.float32]:
+def audio_samples_from_file(file: BinaryIO, sample_rate: int) -> npt.NDArray[np.float32]:
     audio_data, _sample_rate = sf.read(
         file,
         format="RAW",
@@ -66,7 +67,7 @@ def audio_samples_from_file(file: BinaryIO, sample_rate: int) -> np.typing.NDArr
         dtype="float32",
         endian="LITTLE",
     )
-    return cast("np.typing.NDArray[np.float32]", audio_data)
+    return cast("npt.NDArray[np.float32]", audio_data)
 
 
 _SOUNDFILE_SUPPORTED_AUDIO_FORMATS = ("mp3", "flac", "wav")
@@ -75,7 +76,7 @@ _SOUNDFILE_SUPPORTED_AUDIO_FORMATS = ("mp3", "flac", "wav")
 class Audio:
     def __init__(
         self,
-        data: np.typing.NDArray[np.float32],
+        data: npt.NDArray[np.float32],
         sample_rate: int,
         name: str | None = None,
     ) -> None:
@@ -106,7 +107,7 @@ class Audio:
     def size_in_mb(self) -> float:
         return self.size_in_bytes / (1024.0 * 1024.0)
 
-    def extend(self, data: np.typing.NDArray[np.float32]) -> None:
+    def extend(self, data: npt.NDArray[np.float32]) -> None:
         self.data = np.append(self.data, data)
 
     def as_bytes(self) -> bytes:
