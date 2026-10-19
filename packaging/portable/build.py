@@ -10,6 +10,8 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 import zipfile
 
 from fetch_crispasr import acquire
@@ -130,6 +132,48 @@ def build_candidate() -> Path:
             for path in ffmpeg.rglob("*"):
                 if path.is_file():
                     archive.write(path, (Path(NAME) / path.relative_to(ffmpeg)).as_posix())
+        run("choco", "install", "nsis", "--yes", "--no-progress")
+        makensis = next(
+            (
+                candidate
+                for candidate in (
+                    shutil.which("makensis"),
+                    r"C:\Program Files (x86)\NSIS\makensis.exe",
+                    r"C:\Program Files\NSIS\makensis.exe",
+                )
+                if candidate and Path(candidate).is_file()
+            ),
+            None,
+        )
+        if makensis is None:
+            raise RuntimeError("NSIS compiler is not available")
+        installer = stage / f"{NAME}-{target}-setup.exe"
+        run(
+            makensis,
+            "/V2",
+            "/DSTAGING=" + str(ffmpeg),
+            "/DOUTPUT=" + str(installer),
+            HERE / "installer.nsi",
+        )
+        with tempfile.TemporaryDirectory(prefix="trio-speaches-installed-") as installed_parent:
+            installed = Path(installed_parent) / NAME
+            run(installer, "/S", "/D=" + str(installed))
+            app_binary = installed / (NAME + ".exe")
+            if not app_binary.is_file():
+                raise RuntimeError("NSIS installer failed to install real frozen binary")
+            run(app_binary, "--check-install", timeout=180)
+            run(app_binary, "--smoke", "--port", "39086", timeout=180)
+            run(installed / "Uninstall.exe", "/S")
+            for _ in range(120):
+                if not app_binary.exists():
+                    break
+                time.sleep(0.25)
+            if app_binary.exists():
+                raise RuntimeError("NSIS uninstall did not remove frozen binary after 30 seconds")
+        logger.info("WINDOWS_SPEACHES_NSIS_INSTALL_SMOKE_UNINSTALL_OK")
+        with installer.open("rb") as stream:
+            install_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        installer.with_suffix(installer.suffix + ".sha256").write_text(f"{install_digest}  {installer.name}\n")
     else:
         result = stage / f"{NAME}-{target}.zip"
         with zipfile.ZipFile(result, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:

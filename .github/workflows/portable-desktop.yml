@@ -53,6 +53,7 @@ jobs:
           name: 'cloud9-speaches-portable-${{ matrix.os }}'
           path: |
             packaging/portable/dist/*/Cloud9-Speaches-*.zip
+            packaging/portable/dist/*/Cloud9-Speaches-*-setup.exe
             packaging/portable/dist/*/Cloud9-Speaches-*.dmg
             packaging/portable/dist/*/Cloud9-Speaches-*.sha256
           if-no-files-found: error
