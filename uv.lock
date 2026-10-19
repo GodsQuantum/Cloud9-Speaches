@@ -3353,6 +3353,7 @@ dependencies = [
     { name = "torch", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "torchaudio", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "torchaudio", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "transcribe-cpp" },
     { name = "uvicorn" },
 ]
 
@@ -3444,6 +3445,7 @@ requires-dist = [
     { name = "soundfile", specifier = ">=0.13.1" },
     { name = "torch", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==2.2.2" },
     { name = "torchaudio", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==2.2.2" },
+    { name = "transcribe-cpp", specifier = "==0.4.0" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 
@@ -3806,6 +3808,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/09/a9/6ba95a270c6f1fbcd8dac228323f2777d886cb206987444e4bce66338dd4/tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb", size = 169598, upload-time = "2026-02-03T17:35:53.048Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf", size = 78374, upload-time = "2026-02-03T17:35:50.982Z" },
+]
+
+[[package]]
+name = "transcribe-cpp"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "transcribe-cpp-native" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/1a/31460b4a253d2080ac062d77de1796ddc8cd27d71f0ac588f04e5374b2fc/transcribe_cpp-0.4.0.tar.gz", hash = "sha256:80255c52ec4109c9fc8e865f6585a19215456b75d71848ec16b03cb6ea980eb6", size = 118034, upload-time = "2026-10-12T00:30:43.424Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/6f/526ea6b0e430eb7d526bf8508634aa671b9a7db1a0e5b24ccf2d03e15af5/transcribe_cpp-0.4.0-py3-none-any.whl", hash = "sha256:9e1b8e522944bb3771829af91f5517a75fe1887a913329d8a25637f05adeed48", size = 47190, upload-time = "2026-10-12T00:30:28.228Z" },
+]
+
+[[package]]
+name = "transcribe-cpp-native"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/c2/cda09bc685044fe134e90b3b791c3c80f751b484df89291cfee28864b5e4/transcribe_cpp_native-0.4.0.tar.gz", hash = "sha256:dbb3bc131731035b8a0c5e920bb05004506b8a6d9c2bab2af12f8344724eb33d", size = 4487675, upload-time = "2026-10-12T00:30:44.899Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/48/dd50ad2d02a8d8ae416afa502cfd26f3f72fb7c56838776b92c9cf0dbb33/transcribe_cpp_native-0.4.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:3dda6c74f3c38add562beb116afe10bf921685c4a96306b1999f852fcf0a3a08", size = 2490475, upload-time = "2026-10-12T00:30:29.977Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/32/d8b834cea6173839fc2e4c4a341ddc1d08149c50df30de6323ce26f7c299/transcribe_cpp_native-0.4.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:7693adc5251611acb4420a8e334e993df62225215a71dfa4be0c492e97fc6ec3", size = 1612720, upload-time = "2026-10-12T00:30:31.796Z" },
+    { url = "https://files.pythonhosted.org/packages/92/da/0f55918a18a1816bacd93f61dfc5bc9631d54d92601d17ca5ab8294dabf9/transcribe_cpp_native-0.4.0-py3-none-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:01a2baea659ca01a9279a69c31d02a91329977290450be14dfce871e4c338007", size = 18333072, upload-time = "2026-10-12T00:30:34.071Z" },
+    { url = "https://files.pythonhosted.org/packages/89/9e/ce76fd0b97adcc9acb176d6d79a7ba4d1a2d6b8310eced2e0a7b0f5cbd89/transcribe_cpp_native-0.4.0-py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9d681da060b182a2358dd2ab1a8090f5cb53a6e5853cb3f8c4bb3b66f2cd6954", size = 22787792, upload-time = "2026-10-12T00:30:37.145Z" },
+    { url = "https://files.pythonhosted.org/packages/05/02/8344765454b79d91854d309840f0d25036c2cff59ec6140b86e334600213/transcribe_cpp_native-0.4.0-py3-none-win_amd64.whl", hash = "sha256:d949f0e38b7e5c709ebabfffee640573ed5838c39d1227762365e672d03b75ab", size = 18258608, upload-time = "2026-10-12T00:30:40.686Z" },
 ]
 
 [[package]]

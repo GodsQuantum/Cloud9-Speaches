@@ -52,6 +52,7 @@ def configure(port: int) -> Path:
     os.environ.setdefault("ALIGN_MODEL_ROOT", str(models / "aligners"))
     os.environ.setdefault("CLOUD9_NATIVE_CTC_ENABLED", "1")
     os.environ.setdefault("CLOUD9_CTC_BACKEND", "cpu")
+    os.environ.setdefault("CLOUD9_TRANSCRIBE_CPP_PREFERRED_QUANT", "Q6_K")
     os.environ.setdefault("TRANSCRIBE_BACKEND", "auto")
     os.environ["UVICORN_HOST"] = "127.0.0.1"
     os.environ["UVICORN_PORT"] = str(port)
@@ -65,6 +66,13 @@ def check_install(port: int) -> None:
     result = subprocess.run([str(binary), "--help"], check=False, capture_output=True, text=True, timeout=20)
     if result.returncode != 0:
         raise RuntimeError(f"CrispASR failed to start: {result.stderr[-400:]}")
+    # Verify true native STT engine and guaranteed CPU fallback before shipping.
+    import transcribe_cpp
+
+    if not transcribe_cpp.backend_available("cpu"):
+        raise RuntimeError("Packaged transcribe.cpp has no native CPU backend")
+    available = [(item.kind, item.description) for item in transcribe_cpp.backends()]
+    logger.info("TRANSCRIBE_CPP_NATIVE_BACKENDS %s", available)
     from speaches.main import create_app
 
     application = create_app()
@@ -118,8 +126,20 @@ def main() -> None:
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--check-install", action="store_true")
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--install-default-models", action="store_true")
+    parser.add_argument("--model-group", choices=("both", "aligner", "transcriber"), default="both")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
+    if args.install_default_models:
+        configure(args.port)
+        from default_models import install_defaults
+
+        install_defaults(
+            Path(os.environ["ALIGN_MODEL_ROOT"]),
+            Path(os.environ["HF_HOME"]),
+            only=args.model_group,
+        )
+        return
     if args.smoke:
         check_install(args.port)
         run_smoke(args.port)
