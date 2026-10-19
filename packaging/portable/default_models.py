@@ -11,7 +11,6 @@ from dataclasses import dataclass
 import hashlib
 import os
 from pathlib import Path
-import shutil
 from typing import Literal
 import urllib.request
 
@@ -96,7 +95,8 @@ def download_aligner(model: PinnedModel, target: Path) -> Path:
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "Cloud9-Speaches-Installer/1.0"})  # noqa: S310
         with urllib.request.urlopen(request, timeout=120) as source, temporary.open("xb") as output:  # noqa: S310
-            shutil.copyfileobj(source, output, length=1024 * 1024)
+            while chunk := source.read(1024 * 1024):
+                output.write(chunk)
         verify_model(temporary, model)
         temporary.replace(target)
         return target

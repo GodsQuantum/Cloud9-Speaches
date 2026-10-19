@@ -60,7 +60,7 @@ def intel_legacy_collect_flags(target: str) -> list[str]:
     Other OS dependency trees remain unchanged.
     """
     if target == "macos-amd64":
-        return ["--collect-all", "speechbrain"]
+        return ["--collect-all", "speechbrain", "--collect-all", "matplotlib"]
     return []
 
 

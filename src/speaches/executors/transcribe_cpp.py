@@ -2,7 +2,7 @@ from collections.abc import Generator
 import os
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import huggingface_hub
 
@@ -27,6 +27,8 @@ from speaches.model_registry import ModelRegistry
 
 TASK_NAME = "automatic-speech-recognition"
 DIARIZATION_TASK_NAME = "speaker-diarization"
+
+type NativeBackend = Literal["auto", "cpu", "cpu_accel", "cuda", "metal", "rocm", "vulkan"]
 SORTFORMER_MODEL_ID = "handy-computer/diar_streaming_sortformer_4spk-v2.1-gguf"
 
 hf_model_filter = HfModelFilter(
@@ -183,13 +185,16 @@ class TranscribeCppDiarizationModelManager(BaseModelManager):
         import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         model_path = transcribe_cpp_diarization_model_registry.get_model_files(model_id)
-        return transcribe_cpp.Model(str(model_path), backend=self.backend)
+        return transcribe_cpp.Model(str(model_path), backend=cast("NativeBackend", self.backend))
 
     def diarize(self, model_id: str, audio: Audio) -> Any:
         import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         with self.load_model(model_id) as model:
-            family = transcribe_cpp.SortformerStreamOptions(preset="very_high_latency")
+            option_type = getattr(transcribe_cpp, "SortformerStreamOptions", None)
+            if option_type is None:
+                raise RuntimeError("Installed transcribe.cpp lacks SortformerStreamOptions")
+            family = option_type(preset="very_high_latency")
             with model.session() as session:
                 return session.run(audio.data, timestamps="none", family=family)
 
@@ -203,7 +208,7 @@ class TranscribeCppModelManager(BaseModelManager):
         import transcribe_cpp  # pyrefly: ignore[missing-import]
 
         model_path = transcribe_cpp_model_registry.get_model_files(model_id)
-        return transcribe_cpp.Model(str(model_path), backend=self.backend)
+        return transcribe_cpp.Model(str(model_path), backend=cast("NativeBackend", self.backend))
 
     def handle_non_streaming_transcription_request(
         self, request: TranscriptionRequest, **_kwargs
@@ -271,7 +276,11 @@ class TranscribeCppModelManager(BaseModelManager):
             family = None
             if getattr(model, "arch", "") == "parakeet":
                 family = transcribe_cpp.ParakeetStreamOptions(att_context_right=6)
-            stream_kwargs = {"language": language, "timestamps": timestamps, "prompt": request.prompt}
+            stream_kwargs: dict[str, Any] = {
+                "language": language,
+                "timestamps": timestamps,
+                "prompt": request.prompt,
+            }
             if family is not None:
                 stream_kwargs["family"] = family
 
