@@ -30,6 +30,8 @@ Python runtime. The HTTP server binds only to `127.0.0.1:8005` by default.
 
 ## Test gates
 
+Windows NSIS setup installs a real PyInstaller binary, tests HTTP then uninstalls it, preserving per-user settings. The portable ZIP remains available.
+
 A CI candidate requires Python imports, the genuine FastAPI routes,
 `crispasr --help` starting successfully from the extracted bundle,
 `/health` and `/v1/audio/alignment/health` HTTP 200 from the frozen process,
@@ -37,7 +39,7 @@ and an archive checksum.
 
 **Not yet proven** by these smoke checks: microphone device integration,
 model download/licensing, accurate word alignment, CUDA/Metal/Vulkan GPU
-acceleration, long-audio performance, production Windows NSIS installation,
+acceleration, long-audio performance, Windows Authenticode signing,
 Apple Developer ID signing, notarization, Gatekeeper or Windows Authenticode.
 These must be certified separately before a stable release.
 
