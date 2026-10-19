@@ -36,7 +36,16 @@ jobs:
       - name: Install authentic Speaches runtime and PyInstaller into private 3.12 environment
         shell: bash
         run: |
-          uv sync --frozen --no-dev --python 3.12
+          if [ "$RUNNER_OS" = "macOS" ] && [ "$(uname -m)" = "x86_64" ]; then
+            # PyTorch stopped publishing Intel macOS wheels after 2.2.x.
+            # Preserve all other pinned runtime dependencies and test the
+            # authentic application against the last Intel wheel pair.
+            uv sync --frozen --no-dev --python 3.12 --no-install-package torch --no-install-package torchaudio
+            uv pip install --python .venv --no-deps "torch==2.2.2" "torchaudio==2.2.2"
+            uv run --no-sync python -c "import torch,torchaudio; assert torch.__version__.startswith('2.2.2'); print('INTEL_LEGACY_TORCH_IMPORTED')"
+          else
+            uv sync --frozen --no-dev --python 3.12
+          fi
           uv pip install --python .venv "pyinstaller==6.22.3" "pytest>=8.4,<9"
       - name: Ensure packaging Python is correct and test CPU runtime extraction
         shell: bash
