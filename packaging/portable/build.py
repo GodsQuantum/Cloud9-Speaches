@@ -66,6 +66,8 @@ def build_candidate() -> Path:
         "gradio_client",
         "--collect-all",
         "language_tags",
+        "--collect-all",
+        "pyannote.audio",
         "--collect-submodules",
         "onnx_asr",
         "--collect-submodules",
