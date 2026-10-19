@@ -42,7 +42,10 @@ jobs:
             # authentic application against the last Intel wheel pair.
             uv sync --frozen --no-dev --python 3.12 --no-install-package torch --no-install-package torchaudio
             uv pip install --python .venv --no-deps "torch==2.2.2" "torchaudio==2.2.2"
-            uv run --no-sync python -c "import torch,torchaudio; assert torch.__version__.startswith('2.2.2'); print('INTEL_LEGACY_TORCH_IMPORTED')"
+            # PyTorch 2.2.2 was compiled against NumPy 1.x. pyannote 3.x
+            # also imports matplotlib at module load, including the frozen app.
+            uv pip install --python .venv "numpy==1.26.4" "matplotlib==3.9.4"
+            uv run --no-sync python -c "import torch,torchaudio,numpy,matplotlib; assert torch.__version__.startswith('2.2.2'); assert numpy.__version__.startswith('1.26.'); print('INTEL_LEGACY_TORCH_NUMPY_MATPLOTLIB_OK')"
           else
             uv sync --frozen --no-dev --python 3.12
           fi

@@ -5,7 +5,7 @@ from build import intel_legacy_collect_flags
 
 
 def test_mac_intel_collects_physical_speechbrain_source() -> None:
-    assert intel_legacy_collect_flags("macos-amd64") == ["--collect-all", "speechbrain"]
+    assert intel_legacy_collect_flags("macos-amd64") == ["--collect-all", "speechbrain", "--collect-all", "matplotlib"]
 
 
 def test_other_platforms_remain_unchanged() -> None:
