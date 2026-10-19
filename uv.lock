@@ -16,8 +16,8 @@ members = [
 constraints = [{ name = "llvmlite", specifier = ">=0.40.0" }]
 overrides = [
     { name = "av", specifier = "~=15.0" },
-    { name = "onnxruntime", marker = "platform_machine != 'x86_64'", specifier = ">=1.24.4" },
-    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64'", specifier = ">=1.24.4" },
+    { name = "onnxruntime", marker = "platform_machine != 'x86_64' or sys_platform == 'darwin'", specifier = ">=1.24.4" },
+    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64' and sys_platform != 'darwin'", specifier = ">=1.24.4" },
     { name = "torchaudio", specifier = "<2.9" },
     { name = "torchcodec", marker = "sys_platform == 'never'" },
 ]
@@ -653,7 +653,7 @@ dependencies = [
     { name = "av" },
     { name = "ctranslate2" },
     { name = "huggingface-hub" },
-    { name = "onnxruntime", marker = "platform_machine != 'x86_64'" },
+    { name = "onnxruntime", marker = "platform_machine != 'x86_64' or sys_platform == 'darwin'" },
     { name = "tokenizers" },
     { name = "tqdm" },
 ]
@@ -1188,7 +1188,7 @@ dependencies = [
     { name = "colorlog" },
     { name = "espeakng-loader" },
     { name = "numpy" },
-    { name = "onnxruntime", marker = "platform_machine != 'x86_64'" },
+    { name = "onnxruntime", marker = "platform_machine != 'x86_64' or sys_platform == 'darwin'" },
     { name = "phonemizer-fork" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ed/c3/8a0e7106759393e1ee22752cd255b10b2ba2804803afe221e8fef1e4faba/kokoro_onnx-0.4.5.tar.gz", hash = "sha256:d6173cdf8957cd648969382b33eb7b274367a65743ccacd546d41032ddb23e62", size = 90537, upload-time = "2025-03-01T18:27:35.432Z" }
@@ -1198,7 +1198,7 @@ wheels = [
 
 [package.optional-dependencies]
 gpu = [
-    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64'" },
+    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
 ]
 
 [[package]]
@@ -2275,7 +2275,7 @@ name = "piper-tts"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "onnxruntime", marker = "platform_machine != 'x86_64'" },
+    { name = "onnxruntime", marker = "platform_machine != 'x86_64' or sys_platform == 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/c0/d9b5f64869274be3ebc6dc483f13791a3c6ebbc0e37fad4e237a76d5365b/piper_tts-1.3.0-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:0af0c90aeddf762555ed940de1ac576acbefb3623e6d5ca4fb1a70359ee7e65d", size = 13819597, upload-time = "2025-07-10T21:07:22.893Z" },
