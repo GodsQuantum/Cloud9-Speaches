@@ -41,6 +41,18 @@ def variant() -> str:
     raise RuntimeError(f"Unsupported OS: {system}")
 
 
+def find_nsis_compiler() -> str:
+    """Use a CI-preinstalled NSIS compiler; never fetch mutable package feeds at packaging time."""
+    for candidate in (
+        shutil.which("makensis"),
+        r"C:\Program Files (x86)\NSIS\makensis.exe",
+        r"C:\Program Files\NSIS\makensis.exe",
+    ):
+        if candidate and Path(candidate).is_file():
+            return str(candidate)
+    raise RuntimeError("NSIS compiler is not available; install the pinned CI tool first")
+
+
 def build_candidate() -> Path:
     target = variant()
     stage = HERE / "dist" / target
@@ -146,21 +158,7 @@ def build_candidate() -> Path:
             for path in ffmpeg.rglob("*"):
                 if path.is_file():
                     archive.write(path, (Path(NAME) / path.relative_to(ffmpeg)).as_posix())
-        run("choco", "install", "nsis", "--yes", "--no-progress")
-        makensis = next(
-            (
-                candidate
-                for candidate in (
-                    shutil.which("makensis"),
-                    r"C:\Program Files (x86)\NSIS\makensis.exe",
-                    r"C:\Program Files\NSIS\makensis.exe",
-                )
-                if candidate and Path(candidate).is_file()
-            ),
-            None,
-        )
-        if makensis is None:
-            raise RuntimeError("NSIS compiler is not available")
+        makensis = find_nsis_compiler()
         installer = stage / f"{NAME}-{target}-setup.exe"
         run(
             makensis,
