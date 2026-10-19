@@ -46,6 +46,7 @@ jobs:
             # also imports matplotlib at module load, including the frozen app.
             uv pip install --python .venv "numpy==1.26.4" "matplotlib==3.9.4"
             uv run --no-sync python -c "import torch,torchaudio,numpy,matplotlib; assert torch.__version__.startswith('2.2.2'); assert numpy.__version__.startswith('1.26.'); print('INTEL_LEGACY_TORCH_NUMPY_MATPLOTLIB_OK')"
+            uv run --no-sync python -c "import numpy, speaches.audio; assert hasattr(numpy, 'typing'); print('INTEL_NUMPY1_SPEACHES_AUDIO_IMPORT_OK')"
           else
             uv sync --frozen --no-dev --python 3.12
           fi
