@@ -53,6 +53,13 @@ jobs:
           uv run --no-sync python -m compileall -q packaging/portable
           uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py
           uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py
+      - name: Install NSIS from GitHub (no Chocolatey feed)
+        if: runner.os == 'Windows'
+        uses: negrutiu/nsis-install@f3339c88dba6fd08910d5275a943f8f746d94876 # v2
+        with:
+          distro: negrutiu
+          arch: amd64
+
       - name: Bundle true Cloud9-Speaches FastAPI/Gradio and upstream CrispASR CPU
         shell: bash
         run: |
