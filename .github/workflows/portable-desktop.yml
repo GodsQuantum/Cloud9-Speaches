@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           uv run --no-sync python -m compileall -q packaging/portable
-          uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py
+          uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py tests/reloaded/test_diarization_compat.py
           uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py
       - name: Install NSIS from GitHub (no Chocolatey feed)
         if: runner.os == 'Windows'
