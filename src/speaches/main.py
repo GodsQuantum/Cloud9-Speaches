@@ -23,6 +23,7 @@ from starlette.responses import RedirectResponse
 
 from speaches.dependencies import ApiKeyDependency, get_config, get_executor_registry
 from speaches.logger import setup_logger
+from speaches.portable_assets import realtime_console_dist
 from speaches.routers.chat import (
     router as chat_router,
 )
@@ -214,7 +215,7 @@ def create_app() -> FastAPI:
 
     # HACK: move this elsewhere
     app.get("/v1/realtime", include_in_schema=False)(lambda: RedirectResponse(url="/v1/realtime/"))
-    app.mount("/v1/realtime", StaticFiles(directory="realtime-console/dist", html=True))
+    app.mount("/v1/realtime", StaticFiles(directory=str(realtime_console_dist()), html=True))
 
     if config.allow_origins is not None:
         app.add_middleware(

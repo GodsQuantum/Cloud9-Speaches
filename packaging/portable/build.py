@@ -22,9 +22,9 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 
 
-def run(*args: str | Path, timeout: int = 1800) -> None:
+def run(*args: str | Path, timeout: int = 1800, cwd: Path | None = None) -> None:
     logger.info("Running %s", [str(arg) for arg in args])
-    subprocess.run([str(a) for a in args], check=True, timeout=timeout)
+    subprocess.run([str(a) for a in args], check=True, timeout=timeout, cwd=cwd)
 
 
 def variant() -> str:
@@ -64,6 +64,33 @@ def intel_legacy_collect_flags(target: str) -> list[str]:
     return []
 
 
+def create_dmg(app: Path, result: Path) -> None:
+    """Create the real macOS disk image with bounded transient EBUSY retries.
+
+    Apple's diskimages-helper can intermittently return "Resource busy"
+    while building a DMG on shared hosted runners. Retry only this known
+    hdiutil error; surface all other failures without obscuring diagnostics.
+    """
+    command = ["hdiutil", "create", "-volname", NAME, "-format", "UDZO", "-srcfolder", str(app), str(result)]
+    for attempt in range(1, 6):
+        process = subprocess.run(command, capture_output=True, text=True, timeout=600, check=False)
+        if process.returncode == 0:
+            logger.info("SPEACHES_MACOS_DMG_CREATED attempt=%d path=%s", attempt, result)
+            return
+        error = (process.stderr or "") + (process.stdout or "")
+        logger.warning("hdiutil create attempt %d/5 returned %d: %s", attempt, process.returncode, error[-1000:])
+        if "resource busy" not in error.lower() or attempt == 5:
+            raise subprocess.CalledProcessError(
+                process.returncode, command, output=process.stdout, stderr=process.stderr
+            )
+        # An interrupted create may leave a partial file at this exact build output.
+        result.unlink(missing_ok=True)
+        delay = 2**attempt
+        logger.info("Retrying transient hdiutil EBUSY after %d seconds", delay)
+        time.sleep(delay)
+    raise AssertionError("Unreachable hdiutil retry state")
+
+
 def build_candidate() -> Path:
     target = variant()
     stage = HERE / "dist" / target
@@ -83,6 +110,8 @@ def build_candidate() -> Path:
         NAME,
         "--paths",
         ROOT / "src",
+        "--add-data",
+        f"{ROOT / 'realtime-console' / 'dist'}:realtime-console/dist",
         "--collect-all",
         "speaches",
         "--collect-all",
@@ -131,9 +160,10 @@ def build_candidate() -> Path:
         source.unlink()
     for source in bin_dir.glob("*.tar.gz"):
         source.unlink()
-    run(frozen, "--check-install", timeout=180)
-    if os.getenv("PORTABLE_E2E_SMOKE", "1") == "1":
-        run(frozen, "--smoke", "--port", "39085", timeout=180)
+    with tempfile.TemporaryDirectory(prefix="trio-speaches-no-source-cwd-") as independent:
+        run(frozen, "--check-install", timeout=180, cwd=Path(independent))
+        if os.getenv("PORTABLE_E2E_SMOKE", "1") == "1":
+            run(frozen, "--smoke", "--port", "39085", timeout=180, cwd=Path(independent))
     logger.info("SPEACHES_PORTABLE_CHECK_PASS %s", target)
     if target.startswith("macos"):
         app = stage / (NAME + ".app")
@@ -159,11 +189,12 @@ def build_candidate() -> Path:
         }
         with (app / "Contents" / "Info.plist").open("wb") as file:
             plistlib.dump(plist, file)
-        run(app / "Contents" / "MacOS" / NAME, "--check-install", timeout=180)
+        with tempfile.TemporaryDirectory(prefix="trio-speaches-macos-installed-") as independent:
+            run(app / "Contents" / "MacOS" / NAME, "--check-install", timeout=180, cwd=Path(independent))
         run("codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", app)
         run("codesign", "--verify", "--deep", "--strict", app)
         result = stage / f"{NAME}-{target}.dmg"
-        run("hdiutil", "create", "-volname", NAME, "-format", "UDZO", "-srcfolder", app, result)
+        create_dmg(app, result)
     elif target.startswith("windows"):
         result = stage / f"{NAME}-{target}.zip"
         with zipfile.ZipFile(result, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
@@ -185,8 +216,9 @@ def build_candidate() -> Path:
             app_binary = installed / (NAME + ".exe")
             if not app_binary.is_file():
                 raise RuntimeError("NSIS installer failed to install real frozen binary")
-            run(app_binary, "--check-install", timeout=180)
-            run(app_binary, "--smoke", "--port", "39086", timeout=180)
+            with tempfile.TemporaryDirectory(prefix="trio-speaches-windows-installed-") as independent:
+                run(app_binary, "--check-install", timeout=180, cwd=Path(independent))
+                run(app_binary, "--smoke", "--port", "39086", timeout=180, cwd=Path(independent))
             run(installed / "Uninstall.exe", "/S")
             for _ in range(120):
                 if not app_binary.exists():
