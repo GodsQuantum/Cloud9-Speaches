@@ -64,6 +64,33 @@ def intel_legacy_collect_flags(target: str) -> list[str]:
     return []
 
 
+def create_dmg(app: Path, result: Path) -> None:
+    """Create the real macOS disk image with bounded transient EBUSY retries.
+
+    Apple's diskimages-helper can intermittently return "Resource busy"
+    while building a DMG on shared hosted runners. Retry only this known
+    hdiutil error; surface all other failures without obscuring diagnostics.
+    """
+    command = ["hdiutil", "create", "-volname", NAME, "-format", "UDZO", "-srcfolder", str(app), str(result)]
+    for attempt in range(1, 6):
+        process = subprocess.run(command, capture_output=True, text=True, timeout=600, check=False)
+        if process.returncode == 0:
+            logger.info("SPEACHES_MACOS_DMG_CREATED attempt=%d path=%s", attempt, result)
+            return
+        error = (process.stderr or "") + (process.stdout or "")
+        logger.warning("hdiutil create attempt %d/5 returned %d: %s", attempt, process.returncode, error[-1000:])
+        if "resource busy" not in error.lower() or attempt == 5:
+            raise subprocess.CalledProcessError(
+                process.returncode, command, output=process.stdout, stderr=process.stderr
+            )
+        # An interrupted create may leave a partial file at this exact build output.
+        result.unlink(missing_ok=True)
+        delay = 2**attempt
+        logger.info("Retrying transient hdiutil EBUSY after %d seconds", delay)
+        time.sleep(delay)
+    raise AssertionError("Unreachable hdiutil retry state")
+
+
 def build_candidate() -> Path:
     target = variant()
     stage = HERE / "dist" / target
@@ -167,7 +194,7 @@ def build_candidate() -> Path:
         run("codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", app)
         run("codesign", "--verify", "--deep", "--strict", app)
         result = stage / f"{NAME}-{target}.dmg"
-        run("hdiutil", "create", "-volname", NAME, "-format", "UDZO", "-srcfolder", app, result)
+        create_dmg(app, result)
     elif target.startswith("windows"):
         result = stage / f"{NAME}-{target}.zip"
         with zipfile.ZipFile(result, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
