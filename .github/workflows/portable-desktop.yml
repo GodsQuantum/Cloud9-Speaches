@@ -63,7 +63,7 @@ jobs:
         run: |
           uv run --no-sync python -m compileall -q packaging/portable
           uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py tests/reloaded/test_diarization_compat.py
-          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py packaging/portable/test_linux_cpu_profile.py
+          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py packaging/portable/test_linux_cpu_profile.py packaging/portable/test_assets.py packaging/portable/test_acoustic_e2e.py
       - name: Install NSIS from GitHub (no Chocolatey feed)
         if: runner.os == 'Windows'
         uses: negrutiu/nsis-install@f3339c88dba6fd08910d5275a943f8f746d94876 # v2
@@ -87,6 +87,10 @@ jobs:
           assert size < 2 * 1024 ** 3, f"CPU archive exceeds 2 GiB: {size}"
           print(f"SPEACHES_LINUX_AMD64_SIZE_BUDGET_OK {size}")
           PY
+      - name: Real French speech FastConformer CPU acoustic certification (native frozen executable)
+        shell: bash
+        run: |
+          uv run --no-sync python packaging/portable/acoustic_e2e.py
       - name: Upload standalone candidate and checksum (unsigned, models download separately)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
