@@ -120,6 +120,19 @@ def wait_for_ready(child: subprocess.Popen[str], origin: str, deadline: float) -
     raise TimeoutError("Frozen Speaches server and installed FastConformer did not become healthy")
 
 
+def assert_port_is_free(port: int) -> None:
+    """A refused connection or Windows firewall timeout still permits a bind attempt.
+
+    An actual established loopback connection must never be treated as our server.
+    The frozen app also checks and rejects its own occupied port on launch.
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            raise RuntimeError(f"Refusing to validate other process: 127.0.0.1:{port} already in use")
+    except OSError:
+        return
+
+
 def run_real_acoustics() -> None:
     binary = frozen_executable()
     transcript = (ROOT / "bench" / "fixtures" / "fr_regression_v1.txt").read_text(encoding="utf-8").strip()
@@ -127,11 +140,7 @@ def run_real_acoustics() -> None:
         raise ValueError("Empty source audio transcript")
     port = 39087
     origin = f"http://127.0.0.1:{port}"
-    try:
-        with socket.create_connection(("127.0.0.1", port), timeout=1):
-            raise RuntimeError(f"Refusing to validate other process: {origin} is already in use")
-    except ConnectionRefusedError:
-        pass
+    assert_port_is_free(port)
 
     with tempfile.TemporaryDirectory(prefix="trio-speaches-real-acoustics-") as scratch:
         temporary = Path(scratch)
