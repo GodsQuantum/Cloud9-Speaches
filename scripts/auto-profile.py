@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from typing import cast
 
 
 def detect_backend(
@@ -76,7 +77,7 @@ def main() -> None:
     args = parser.parse_args()
     result = actual_probe()
     if args.env:
-        for k, v in result["environment"].items():
+        for k, v in cast("dict[str, str]", result["environment"]).items():
             print(f"{k}={v}")
     else:
         print(json.dumps(result, ensure_ascii=False, indent=2))
