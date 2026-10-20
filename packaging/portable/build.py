@@ -22,9 +22,9 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 
 
-def run(*args: str | Path, timeout: int = 1800) -> None:
+def run(*args: str | Path, timeout: int = 1800, cwd: Path | None = None) -> None:
     logger.info("Running %s", [str(arg) for arg in args])
-    subprocess.run([str(a) for a in args], check=True, timeout=timeout)
+    subprocess.run([str(a) for a in args], check=True, timeout=timeout, cwd=cwd)
 
 
 def variant() -> str:
@@ -83,6 +83,8 @@ def build_candidate() -> Path:
         NAME,
         "--paths",
         ROOT / "src",
+        "--add-data",
+        f"{ROOT / 'realtime-console' / 'dist'}:realtime-console/dist",
         "--collect-all",
         "speaches",
         "--collect-all",
@@ -131,9 +133,10 @@ def build_candidate() -> Path:
         source.unlink()
     for source in bin_dir.glob("*.tar.gz"):
         source.unlink()
-    run(frozen, "--check-install", timeout=180)
-    if os.getenv("PORTABLE_E2E_SMOKE", "1") == "1":
-        run(frozen, "--smoke", "--port", "39085", timeout=180)
+    with tempfile.TemporaryDirectory(prefix="trio-speaches-no-source-cwd-") as independent:
+        run(frozen, "--check-install", timeout=180, cwd=Path(independent))
+        if os.getenv("PORTABLE_E2E_SMOKE", "1") == "1":
+            run(frozen, "--smoke", "--port", "39085", timeout=180, cwd=Path(independent))
     logger.info("SPEACHES_PORTABLE_CHECK_PASS %s", target)
     if target.startswith("macos"):
         app = stage / (NAME + ".app")
@@ -159,7 +162,8 @@ def build_candidate() -> Path:
         }
         with (app / "Contents" / "Info.plist").open("wb") as file:
             plistlib.dump(plist, file)
-        run(app / "Contents" / "MacOS" / NAME, "--check-install", timeout=180)
+        with tempfile.TemporaryDirectory(prefix="trio-speaches-macos-installed-") as independent:
+            run(app / "Contents" / "MacOS" / NAME, "--check-install", timeout=180, cwd=Path(independent))
         run("codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", app)
         run("codesign", "--verify", "--deep", "--strict", app)
         result = stage / f"{NAME}-{target}.dmg"
@@ -185,8 +189,9 @@ def build_candidate() -> Path:
             app_binary = installed / (NAME + ".exe")
             if not app_binary.is_file():
                 raise RuntimeError("NSIS installer failed to install real frozen binary")
-            run(app_binary, "--check-install", timeout=180)
-            run(app_binary, "--smoke", "--port", "39086", timeout=180)
+            with tempfile.TemporaryDirectory(prefix="trio-speaches-windows-installed-") as independent:
+                run(app_binary, "--check-install", timeout=180, cwd=Path(independent))
+                run(app_binary, "--smoke", "--port", "39086", timeout=180, cwd=Path(independent))
             run(installed / "Uninstall.exe", "/S")
             for _ in range(120):
                 if not app_binary.exists():
