@@ -93,3 +93,20 @@ Hugging Face 模型存放在持久化 Docker 卷 speaches-models 中，不会被
 ## 许可证
 
 Cloud9-Speaches 是非官方社区发行版，保留 Speaches 的 Git 历史与 MIT 许可证。transcribe.cpp 作为外部依赖构建，并保留其自身许可证及第三方声明。
+
+## CPU / Vulkan / CUDA 硬件检测与性能建议
+
+**下载安装包：** [Linux x64/ARM64、Windows x64、macOS Apple Silicon 和 Intel 五种架构](https://github.com/GodsQuantum/Cloud9-Speaches/releases/tag/desktop-v0.1.0-rc.1)。候选版本通过了真实 CPU FastConformer 语音测试，但 Windows/macOS **仍无正式签名和 Apple Developer ID 公证**，也未验证所有设备的 GPU 加速。
+
+针对 Linux Docker 主机的**只读**诊断脚本：nvidia-smi 正常工作才建议 CUDA；必须存在可访问的 renderD 设备且 vulkaninfo 成功才建议 Vulkan；否则推荐 CPU。不更改 Compose、磁盘挂载、模型或正在运行的服务。
+
+~~~bash
+python3 scripts/auto-profile.py
+python3 scripts/auto-profile.py --env
+# 检查建议后再选择 compose.cpu.yaml / compose.vulkan.yaml / compose.cuda.yaml
+docker compose -f compose.vulkan.yaml config
+~~~
+
+Ryzen 7 8845HS / Radeon 780M 优先实际测试 transcribe.cpp GGUF Vulkan；faster-whisper/CTranslate2 不会因镜像为 Vulkan 而获得 AMD GPU 加速，可以先选择 WHISPER_DEVICE=cpu 和约 4 个 CPU 线程。NVIDIA 还需 Container Toolkit 与容器内真实 CUDA 模型测试；轻量主机从 CPU 模式与 lean 模型开始。
+
+用同一段真实录音对比 Nemotron、Qwen3-ASR、Whisper、FastConformer FR Q4 的准确率、逐词时间、内存、延迟和 GPU 利用率。**硬件检测不是性能基准，也不意味着所有 GPU 都已认证。**
