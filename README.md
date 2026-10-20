@@ -161,3 +161,18 @@ Cloud9-Speaches is an unofficial community distribution built on Speaches and tr
 The Speaches code and this distribution retain the MIT license and upstream Git history. transcribe.cpp is built as an external dependency and retains its own license and third-party notices.
 
 Thanks to the Speaches and transcribe.cpp maintainers for the foundations Reloaded packages together.
+
+## Automatic Linux Docker CPU/Vulkan/CUDA hardware advice
+
+**Downloads:** [Native CPU candidates for Linux x64/ARM64, Windows x64 and macOS Intel/Apple Silicon](https://github.com/GodsQuantum/Cloud9-Speaches/releases/tag/desktop-v0.1.0-rc.1). Native checks include a real CPU FastConformer model; **Windows/macOS packages have no official signing or Apple Developer ID notarization, and GPU acceleration is not certified on every client device**.
+
+The Linux host doctor is **read-only**: choose CUDA only if nvidia-smi works, Vulkan only with an accessible render node AND working vulkaninfo; otherwise CPU. It neither changes Compose nor starts services:
+
+~~~bash
+python3 scripts/auto-profile.py
+python3 scripts/auto-profile.py --env
+# Review the suggested Compose file before using it:
+docker compose -f compose.vulkan.yaml config
+~~~
+
+On Ryzen 7 8845HS with Radeon 780M, test transcribe.cpp GGUF via Vulkan, while faster-whisper/CTranslate2 remains CPU with WHISPER_DEVICE=cpu and around 4 threads. NVIDIA additionally requires the Container Toolkit and a real CUDA inference test. On limited hardware, start CPU-only and lean models. Benchmark Nemotron, Qwen3-ASR, Whisper and French FastConformer Q4 on identical representative audio, measuring quality, memory, word alignment and actual GPU utilization. **Device detection is not a performance benchmark or a substitute for a real smoke test.**
