@@ -102,3 +102,17 @@ Le cache Hugging Face est stocké dans le volume Docker persistant speaches-mode
 ## Licence
 
 Cloud9-Speaches est une distribution communautaire non officielle. Le projet conserve l'historique Git et la licence MIT de Speaches ; transcribe.cpp reste une dépendance externe avec sa propre licence et ses notices tierces.
+
+## Conseil automatique de profil CPU, Vulkan ou CUDA
+
+**Téléchargements :** [candidats natifs cinq architectures](https://github.com/GodsQuantum/Cloud9-Speaches/releases/tag/desktop-v0.1.0-rc.1). Ils ont passé un vrai test acoustique CPU, mais **pas la signature officielle Windows, la notarisation Apple Developer ID ni la validation GPU sur toutes les machines**.
+
+Le diagnostic est prévu sur **l'hôte Linux Docker** et ne modifie pas le système. Il conseille CUDA si nvidia-smi fonctionne, Vulkan si le render node est accessible ET si vulkaninfo réussit, sinon CPU :
+
+~~~bash
+python3 scripts/auto-profile.py
+python3 scripts/auto-profile.py --env
+docker compose -f compose.vulkan.yaml config    # examiner d'abord la recommandation
+~~~
+
+Sur Ryzen 7 8845HS / Radeon 780M, tester transcribe.cpp GGUF en Vulkan ; faster-whisper/CTranslate2 reste en CPU avec WHISPER_DEVICE=cpu (environ 4 threads). CUDA exige NVIDIA Container Toolkit et une inférence réelle. Sur petite machine, commencer par compose.cpu.yaml et les modèles lean. Mesurer Nemotron, Qwen3-ASR, Whisper, FastConformer FR Q4 sur le même audio : mémoire, latence, précision et temps par mot. **Détecter un GPU ne certifie pas un gain de vitesse.**
