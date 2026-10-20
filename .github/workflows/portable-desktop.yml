@@ -47,6 +47,13 @@ jobs:
             uv pip install --python .venv "numpy==1.26.4" "matplotlib==3.9.4"
             uv run --no-sync python -c "import torch,torchaudio,numpy,matplotlib; assert torch.__version__.startswith('2.2.2'); assert numpy.__version__.startswith('1.26.'); print('INTEL_LEGACY_TORCH_NUMPY_MATPLOTLIB_OK')"
             uv run --no-sync python -c "import numpy, speaches.audio; assert hasattr(numpy, 'typing'); print('INTEL_NUMPY1_SPEACHES_AUDIO_IMPORT_OK')"
+          elif [ "$RUNNER_OS" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
+            # Native CPU PyTorch leaves transcribe.cpp/CrispASR Vulkan providers
+            # independent. Avoid bundling multi-GB NVIDIA CUDA libraries into
+            # a desktop CPU fallback which cannot use them.
+            uv sync --frozen --no-dev --python 3.12 --no-install-package torch --no-install-package torchaudio
+            uv pip install --python .venv --no-deps --index https://download.pytorch.org/whl/cpu "torch==2.8.0+cpu" "torchaudio==2.8.0+cpu"
+            uv run --no-sync python -c "import torch,torchaudio; assert torch.version.cuda is None; assert torch.__version__.startswith('2.8.0'); print('LINUX_CPU_PYTORCH_VERIFIED')"
           else
             uv sync --frozen --no-dev --python 3.12
           fi
@@ -56,7 +63,7 @@ jobs:
         run: |
           uv run --no-sync python -m compileall -q packaging/portable
           uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py tests/reloaded/test_diarization_compat.py
-          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py
+          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py packaging/portable/test_linux_cpu_profile.py
       - name: Install NSIS from GitHub (no Chocolatey feed)
         if: runner.os == 'Windows'
         uses: negrutiu/nsis-install@f3339c88dba6fd08910d5275a943f8f746d94876 # v2
@@ -68,6 +75,18 @@ jobs:
         shell: bash
         run: |
           uv run --no-sync python packaging/portable/build.py
+      - name: Enforce bounded Linux x64 distribution size
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        shell: bash
+        run: |
+          uv run --no-sync python - <<'PY'
+          from pathlib import Path
+          artifacts = list(Path("packaging/portable/dist/linux-amd64").glob("Cloud9-Speaches-linux-amd64.zip"))
+          assert len(artifacts) == 1, f"Expected one Linux CPU archive: {artifacts}"
+          size = artifacts[0].stat().st_size
+          assert size < 2 * 1024 ** 3, f"CPU archive exceeds 2 GiB: {size}"
+          print(f"SPEACHES_LINUX_AMD64_SIZE_BUDGET_OK {size}")
+          PY
       - name: Upload standalone candidate and checksum (unsigned, models download separately)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
