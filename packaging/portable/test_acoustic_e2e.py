@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from acoustic_e2e import encode_multipart, validate_alignment
+from contextlib import nullcontext
+from unittest.mock import patch
+
+from acoustic_e2e import assert_port_is_free, encode_multipart, validate_alignment
 import pytest
 
 
@@ -41,3 +44,16 @@ def test_acoustic_alignment_rejects_missing_spoken_words() -> None:
             "Bonjour Paris",
             1.0,
         )
+
+
+def test_windows_loopback_timeout_allows_real_bind_attempt() -> None:
+    with patch("acoustic_e2e.socket.create_connection", side_effect=TimeoutError("timed out")):
+        assert_port_is_free(39087)
+
+
+def test_existing_loopback_service_rejected_without_false_certification() -> None:
+    with (
+        patch("acoustic_e2e.socket.create_connection", return_value=nullcontext()),
+        pytest.raises(RuntimeError, match="already in use"),
+    ):
+        assert_port_is_free(39087)
