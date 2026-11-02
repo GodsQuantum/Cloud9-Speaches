@@ -338,7 +338,12 @@ def optionally_align_words(result: Any, *, request: Any, language: str | None) -
         model=getattr(request, "alignment_model", None),
     )
     segments = tuple(getattr(result, "segments", ()) or ())
-    if not native_valid or not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
+    # Preserve real ASR chunk boundaries after strict forced word alignment.
+    # A mismatch in *native word* timing validity does not invalidate the
+    # underlying ASR segments. Collapsing them into one long segment causes
+    # downstream CTC aligners to reject audio >38 s, despite acoustic words
+    # having been verified against these exact segments above.
+    if not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
         segments = (SimpleNamespace(text=result.text, t0_ms=words[0].t0_ms, t1_ms=words[-1].t1_ms),)
     return SimpleNamespace(
         text=result.text,

@@ -1,0 +1,8 @@
+# Small tested overlay on the previous native-CTC certified Cloud9 image.
+# Keeps all Vulkan/CTC models and libraries intact; changes only the ASR
+# handoff that collapsed real time-segment metadata after forced alignment.
+FROM cloud9/speaches:native-ctc-20261018-certified
+USER root
+COPY --chown=ubuntu:ubuntu transcribe_cpp.py /home/ubuntu/speaches/src/speaches/executors/transcribe_cpp.py
+RUN /home/ubuntu/speaches/.venv/bin/python -m py_compile /home/ubuntu/speaches/src/speaches/executors/transcribe_cpp.py
+USER ubuntu
