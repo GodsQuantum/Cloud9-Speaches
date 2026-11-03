@@ -154,3 +154,75 @@ def create_model_manager_tab() -> None:
             return "Pack ScribeWatch installé et SHA-256 vérifié. Dans ScribeWatch > Providers, cliquez sur Connect Cloud9-Speaches (http://127.0.0.1:8005)."
 
         bundle.click(install_scribewatch_bundle, outputs=bundle_status)
+
+        from speaches.ui.custom_asr import GGUF_MODELS, install_hf_gguf, list_hf_gguf
+
+        gr.Markdown("## ASR GGUF : Parakeet Ultra, Qwen3, Nemotron")
+        gr.Markdown("Sélectionnez un modèle transcribe.cpp compatible. Les GGUF llama.cpp ne conviennent pas.")
+        curated = gr.Dropdown(
+            choices=[(name, repo) for name, repo in GGUF_MODELS],
+            value=GGUF_MODELS[0][1],
+            label="Catalogue de modèles vocaux",
+        )
+        source = gr.Textbox(
+            value=GGUF_MODELS[0][1],
+            label="Dépôt Hugging Face ou URL personnalisée",
+            placeholder="organisation/modele ou https://huggingface.co/organisation/modele",
+        )
+        curated.change(lambda repo: repo, inputs=curated, outputs=source)
+        variants = gr.Dropdown(choices=[], label="Quantification / fichier GGUF", interactive=True)
+        custom_status = gr.Textbox(label="Statut modèle GGUF", interactive=False)
+
+        def discover(source_value: str) -> tuple[object, str]:
+            try:
+                candidates = list_hf_gguf(source_value)
+            except Exception as exc:
+                raise gr.Error(f"Lecture du dépôt impossible : {type(exc).__name__}") from exc
+            if not candidates:
+                raise gr.Error("Aucun fichier GGUF pris en charge dans le dépôt.")
+            return gr.update(
+                choices=candidates, value=candidates[0][1]
+            ), f"{len(candidates)} quantification(s) trouvée(s)."
+
+        gr.Button("Afficher les quantifications").click(discover, inputs=source, outputs=[variants, custom_status])
+
+        def install_selected(source_value: str, filename: str) -> str:
+            try:
+                return install_hf_gguf(source_value, filename)
+            except Exception as exc:
+                raise gr.Error(f"Téléchargement impossible : {type(exc).__name__}") from exc
+
+        gr.Button("Installer ce modèle GGUF", variant="primary").click(
+            install_selected, inputs=[source, variants], outputs=custom_status
+        )
+        gr.Markdown(
+            "Le modèle doit ensuite être sélectionné dans Transcription et testé avec un audio fictif. "
+            "Import ne garantit pas compatibilité ni précision."
+        )
+
+        from speaches.ui.custom_asr import install_github_gguf
+
+        with gr.Accordion("Fichier GGUF externe : GitHub Releases", open=False):
+            gr.Markdown(
+                "Pour les GGUF ASR transcribe.cpp seulement. Source HTTPS publique GitHub Releases, "
+                "SHA-256 publié par l'éditeur obligatoire. Le fichier est limité à 12 Gio."
+            )
+            external_source = gr.Textbox(
+                label="URL du fichier GGUF",
+                placeholder="https://github.com/org/repo/releases/download/tag/model-Q8_0.gguf",
+            )
+            external_hash = gr.Textbox(label="SHA-256 du modèle", type="password")
+            external_status = gr.Textbox(label="État de l'import externe", interactive=False)
+
+            def install_external(url: str, digest: str) -> str:
+                try:
+                    return install_github_gguf(url, digest)
+                except Exception as exc:
+                    raise gr.Error(f"Import externe refusé : {type(exc).__name__}") from exc
+
+            gr.Button("Importer le modèle externe").click(
+                install_external, inputs=[external_source, external_hash], outputs=external_status
+            )
+
+
+# Extend the desktop-only model-manager UI without enabling it in containers.

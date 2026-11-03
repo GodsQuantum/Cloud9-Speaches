@@ -1,3 +1,4 @@
+# Copyright (c) 2026 GodsQuantum
 from collections.abc import Generator
 import os
 from pathlib import Path
@@ -66,9 +67,35 @@ class TranscribeCppModelRegistry(ModelRegistry[Model, Path]):
                 language=extract_language_list(card_data),
                 task=TASK_NAME,
             )
+        if os.getenv("CLOUD9_PORTABLE_MODE") == "1":
+            from speaches.ui.custom_asr import list_local_custom_ggufs
+
+            for model_id, model_path in list_local_custom_ggufs():
+                yield Model(
+                    id=model_id,
+                    created=int(model_path.stat().st_mtime),
+                    owned_by="custom",
+                    language=[],
+                    task=TASK_NAME,
+                )
 
     def get_model_files(self, model_id: str) -> Path:
+        if model_id.startswith("custom/"):
+            from speaches.ui.custom_asr import custom_model_file
+
+            path = custom_model_file(model_id)
+            if path is None:
+                raise FileNotFoundError(f"No locally installed GGUF for '{model_id}'")
+            return path
         files = [path for path in list_model_files(model_id, "**/*.gguf") if path.is_file()]
+        if os.getenv("CLOUD9_PORTABLE_MODE") == "1":
+            from speaches.ui.custom_asr import preferred_hf_gguf
+
+            selected = preferred_hf_gguf(model_id)
+            if selected:
+                match = next((path for path in files if path.name == Path(selected).name), None)
+                if match is not None:
+                    return match
         # A preferred quant is explicit and reversible. Default remains the
         # historical Q8_0; on Cloud9 choose Q6_K for the calibrated Turbo.
         preferred = os.getenv("CLOUD9_TRANSCRIBE_CPP_PREFERRED_QUANT", "Q8_0").strip().upper()
@@ -90,6 +117,8 @@ class TranscribeCppModelRegistry(ModelRegistry[Model, Path]):
         raise FileNotFoundError(f"No GGUF model file found for '{model_id}'")
 
     def download_model_files(self, model_id: str) -> None:
+        if model_id.startswith("custom/"):
+            raise ValueError("Custom GGUF models must be installed from the desktop model manager")
         huggingface_hub.snapshot_download(
             repo_id=model_id,
             repo_type="model",
