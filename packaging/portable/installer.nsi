@@ -7,6 +7,10 @@ Unicode true
   !error "Missing OUTPUT setup EXE path"
 !endif
 
+!ifdef APP_ICON
+Icon "${APP_ICON}"
+UninstallIcon "${APP_ICON}"
+!endif
 Name "Cloud9-Speaches"
 OutFile "${OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\Cloud9-Speaches"

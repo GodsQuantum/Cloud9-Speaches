@@ -57,13 +57,13 @@ jobs:
           else
             uv sync --frozen --no-dev --python 3.12
           fi
-          uv pip install --python .venv "pyinstaller==6.22.3" "pytest>=8.4,<9"
+          uv pip install --python .venv "pyinstaller==6.22.3" "pytest>=8.4,<9" "pystray==0.19.5" "Pillow==11.3.0"
       - name: Ensure packaging Python is correct and test CPU runtime extraction
         shell: bash
         run: |
           uv run --no-sync python -m compileall -q packaging/portable
           uv run --no-sync python -m pytest -q --confcutdir=tests/reloaded tests/reloaded/test_cloud9_native_ctc.py tests/reloaded/test_diarization_compat.py
-          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py packaging/portable/test_linux_cpu_profile.py packaging/portable/test_assets.py packaging/portable/test_acoustic_e2e.py packaging/portable/test_dmg_retry.py
+          uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py packaging/portable/test_hardware_models.py packaging/portable/test_linux_cpu_profile.py packaging/portable/test_assets.py packaging/portable/test_acoustic_e2e.py packaging/portable/test_dmg_retry.py
       - name: Install NSIS from GitHub (no Chocolatey feed)
         if: runner.os == 'Windows'
         uses: negrutiu/nsis-install@f3339c88dba6fd08910d5275a943f8f746d94876 # v2
