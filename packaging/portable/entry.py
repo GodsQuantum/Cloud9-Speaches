@@ -166,6 +166,7 @@ def main() -> None:
         run_tray(args.port)
     else:
         import uvicorn
+
         from speaches.main import create_app
         if not args.no_browser:
             webbrowser.open(f"http://127.0.0.1:{args.port}/")

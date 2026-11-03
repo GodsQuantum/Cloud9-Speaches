@@ -1,3 +1,4 @@
+# Copyright (c) 2026 GodsQuantum
 """Hardware-aware model chooser for native desktop builds only."""
 from __future__ import annotations
 
@@ -68,7 +69,7 @@ def create_model_manager_tab() -> None:
         model = gr.Dropdown(choices=[(label, repo) for repo, label in CATALOGUE],
                             value=recommend(ram_gb, gpu, "Vitesse"), label="Modèle à installer")
         advisory = gr.Markdown("Conseil : commencer avec le modèle proposé, puis comparer sur un audio réel.")
-        def update(choice: str):
+        def update(choice: str) -> tuple[object, str]:
             selected = recommend(ram_gb, gpu, choice)
             return gr.update(value=selected), f"Suggestion **{choice.lower()}** pour ce matériel : `{selected}`."
         goal.change(update, inputs=goal, outputs=[model, advisory])

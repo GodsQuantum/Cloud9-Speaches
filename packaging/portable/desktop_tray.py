@@ -1,15 +1,15 @@
+# Copyright (c) 2026 GodsQuantum
 """Native per-user desktop tray. No polling daemon, no network listener beyond Speaches."""
 from __future__ import annotations
 
+import contextlib
 import os
-import socket
 from pathlib import Path
-import platform
 import plistlib
+import socket
 import sys
 import threading
 import webbrowser
-
 
 APP_ID = "io.github.GodsQuantum.Cloud9-Speaches"
 
@@ -40,10 +40,8 @@ def set_startup(enabled: bool) -> None:
             if enabled:
                 winreg.SetValueEx(key, "Cloud9-Speaches", 0, winreg.REG_SZ, f'"{sys.executable}"')
             else:
-                try:
+                with contextlib.suppress(FileNotFoundError):
                     winreg.DeleteValue(key, "Cloud9-Speaches")
-                except FileNotFoundError:
-                    pass
         return
     path = _startup_file()
     if not enabled:
@@ -81,30 +79,31 @@ def request_show() -> bool:
 
 
 def run_tray(port: int) -> None:
-    import pystray
     from PIL import Image
+    import pystray
     import uvicorn
+
     from speaches.main import create_app
 
     server = uvicorn.Server(uvicorn.Config(create_app(), host="127.0.0.1", port=port, log_level="info"))
     worker = threading.Thread(target=server.run, name="Cloud9-Speaches API", daemon=False)
     worker.start()
     url = f"http://127.0.0.1:{port}/"
-    def open_ui(icon, item):
+    def open_ui(_icon: object, _item: object) -> None:
         webbrowser.open(url)
-    def toggle_startup(icon, item):
+    def toggle_startup(icon: pystray.Icon, _item: object) -> None:
         set_startup(not startup_enabled())
         icon.update_menu()
-    def hide_icon(icon, item):
+    def hide_icon(icon: pystray.Icon, _item: object) -> None:
         # Hide only for this session; relaunching the app restores its tray.
         icon.visible = False
-    def quit_app(icon, item):
+    def quit_app(icon: pystray.Icon, _item: object) -> None:
         server.should_exit = True
         icon.stop()
 
     menu = pystray.Menu(
         pystray.MenuItem("Ouvrir Cloud9-Speaches", open_ui, default=True),
-        pystray.MenuItem("Lancer avec la session", toggle_startup, checked=lambda item: startup_enabled()),
+        pystray.MenuItem("Lancer avec la session", toggle_startup, checked=lambda _item: startup_enabled()),
         pystray.MenuItem("Masquer l'icône (jusqu'au prochain lancement)", hide_icon),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quitter", quit_app),
@@ -115,7 +114,7 @@ def run_tray(port: int) -> None:
     inbox.bind(("127.0.0.1", 0))
     ipc_path = Path(os.environ["HF_HOME"]).parent.parent / "tray-ipc.port"
     ipc_path.write_text(str(inbox.getsockname()[1]), encoding="ascii")
-    def receive_show():
+    def receive_show() -> None:
         while True:
             try:
                 packet, _ = inbox.recvfrom(32)
