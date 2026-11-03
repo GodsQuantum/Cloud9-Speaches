@@ -146,11 +146,14 @@ def test_hf_import_uses_cache_without_bulk_download(monkeypatch: pytest.MonkeyPa
 
     def download(*, repo_id: str, filename: str, revision: str) -> str:
         assert repo_id == "test/model"
-        assert revision == "main"
+        assert revision == "f" * 40
         calls.append(filename)
         return str(tmp_path / filename)
 
-    hf = SimpleNamespace(hf_hub_download=download)
+    info = SimpleNamespace(sha="f" * 40, siblings=[SimpleNamespace(rfilename="qwen-Q8_0.gguf", size=1048576)])
+    hf = SimpleNamespace(
+        HfApi=lambda: SimpleNamespace(model_info=lambda *_args, **_kwargs: info), hf_hub_download=download
+    )
     with (
         patch.dict(sys.modules, {"huggingface_hub": hf}),
         patch("speaches.ui.custom_asr.list_hf_gguf", return_value=choices),

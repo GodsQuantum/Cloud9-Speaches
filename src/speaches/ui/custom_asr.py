@@ -93,16 +93,28 @@ def list_hf_gguf(source: str) -> list[tuple[str, str]]:
 
 
 def install_hf_gguf(source: str, filename: str) -> str:
-    """HF Hub downloader is atomic, resumes safely and checks repository blobs."""
-    from huggingface_hub import hf_hub_download
+    """Pin the exact HF revision and verify size before downloading."""
+    from huggingface_hub import HfApi, hf_hub_download
 
     repo, revision, file_hint = parse_hf_source(source)
-    matches = {name for _, name in list_hf_gguf(source)}
-    if filename not in matches or (file_hint and filename != file_hint):
-        raise ValueError("Le fichier GGUF n'appartient pas au dépôt ou dépasse 12 Gio.")
-    # README is required for native registry's model-card filtering.
-    hf_hub_download(repo_id=repo, filename="README.md", revision=revision)
-    path = hf_hub_download(repo_id=repo, filename=filename, revision=revision)
+    if file_hint and filename != file_hint:
+        raise ValueError("Le fichier GGUF ne correspond pas à l'URL fournie.")
+    info = HfApi().model_info(repo, revision=revision, files_metadata=True)
+    file = next(
+        (
+            f
+            for f in info.siblings or []
+            if f.rfilename == filename
+            and f.size
+            and f.size <= _MAX_BYTES
+            and any(filename.upper().endswith("-" + q + ".GGUF") for q in _QUANTS)
+        ),
+        None,
+    )
+    if file is None or not info.sha:
+        raise ValueError("Fichier GGUF invalide, trop volumineux ou revision indisponible.")
+    hf_hub_download(repo_id=repo, filename="README.md", revision=info.sha)
+    path = hf_hub_download(repo_id=repo, filename=filename, revision=info.sha)
     set_preferred_hf_gguf(repo, filename)
     return f"{repo} · {Path(path).name} installé dans le cache HF ; sélectionnez ce modèle dans Transcription."
 
@@ -221,6 +233,9 @@ def install_github_gguf(source: str, sha256: str) -> str:
                 output.write(chunk)
         if digest.hexdigest() != sha256:
             raise ValueError("SHA-256 incorrect : téléchargement refusé.")
+        with tmp.open("rb") as verified:
+            if verified.read(4) != b"GGUF":
+                raise ValueError("Fichier importé invalide : signature GGUF absente.")
         tmp.replace(target)
     finally:
         tmp.unlink(missing_ok=True)
