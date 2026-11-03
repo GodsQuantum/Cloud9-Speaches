@@ -1,5 +1,6 @@
 # Copyright (c) 2026 GodsQuantum
 """Hardware-aware model chooser for native desktop builds only."""
+
 from __future__ import annotations
 
 import os
@@ -20,13 +21,15 @@ CATALOGUE = (
 def hardware() -> tuple[float, bool, str]:
     try:
         import psutil
+
         ram_gb = psutil.virtual_memory().total / 1024**3
     except (ImportError, OSError):
-        ram_gb = 0.
+        ram_gb = 0.0
     gpu = False
     gpu_name = "CPU"
     try:
         import torch
+
         if torch.cuda.is_available():
             gpu = True
             gpu_name = torch.cuda.get_device_name(0)
@@ -60,25 +63,35 @@ def create_model_manager_tab() -> None:
     with gr.Tab("Modèles à télécharger"):
         gr.Markdown("## Modèles de transcription locaux")
         gr.Markdown(
-            f"**Matériel détecté :** {count} threads CPU · "
-            f"{ram_gb:.1f} Go RAM" if ram_gb else f"**Matériel détecté :** {count} threads CPU · RAM inconnue"
+            f"**Matériel détecté :** {count} threads CPU · {ram_gb:.1f} Go RAM"
+            if ram_gb
+            else f"**Matériel détecté :** {count} threads CPU · RAM inconnue"
         )
-        gr.Markdown(f"**Accélérateur :** {gpu_name}. La recommandation est indicative ; "
-                    "les performances réelles dépendent du backend et du matériel.")
+        gr.Markdown(
+            f"**Accélérateur :** {gpu_name}. La recommandation est indicative ; "
+            "les performances réelles dépendent du backend et du matériel."
+        )
         goal = gr.Radio(["Vitesse", "Précision"], value="Vitesse", label="Priorité")
-        model = gr.Dropdown(choices=[(label, repo) for repo, label in CATALOGUE],
-                            value=recommend(ram_gb, gpu, "Vitesse"), label="Modèle à installer")
+        model = gr.Dropdown(
+            choices=[(label, repo) for repo, label in CATALOGUE],
+            value=recommend(ram_gb, gpu, "Vitesse"),
+            label="Modèle à installer",
+        )
         advisory = gr.Markdown("Conseil : commencer avec le modèle proposé, puis comparer sur un audio réel.")
+
         def update(choice: str) -> tuple[object, str]:
             selected = recommend(ram_gb, gpu, choice)
             return gr.update(value=selected), f"Suggestion **{choice.lower()}** pour ce matériel : `{selected}`."
+
         goal.change(update, inputs=goal, outputs=[model, advisory])
         button = gr.Button("Télécharger le modèle sélectionné", variant="primary")
         result = gr.Textbox(label="État / téléchargement", interactive=False)
+
         def install(repo_id: str) -> str:
             if repo_id not in dict(CATALOGUE):
                 raise gr.Error("Modèle non autorisé dans le catalogue")
             from speaches.dependencies import get_executor_registry
+
             registry = get_executor_registry()
             try:
                 downloaded = registry.download_model_by_id(repo_id)
@@ -86,7 +99,10 @@ def create_model_manager_tab() -> None:
                 # UI should report the error without logging private tokens.
                 raise gr.Error(f"Téléchargement impossible : {type(exc).__name__}") from exc
             return f"{repo_id} : {'téléchargement terminé' if downloaded else 'déjà installé'}"
+
         button.click(install, inputs=model, outputs=result)
-        gr.Markdown("Téléchargements depuis Hugging Face, stockés dans le cache local utilisateur. "
-                    "Le modèle doit être sélectionné séparément dans l'onglet transcription. "
-                    "Ce catalogue est multilingue ; vérifier la précision sur vos enregistrements.")
+        gr.Markdown(
+            "Téléchargements depuis Hugging Face, stockés dans le cache local utilisateur. "
+            "Le modèle doit être sélectionné séparément dans l'onglet transcription. "
+            "Ce catalogue est multilingue ; vérifier la précision sur vos enregistrements."
+        )

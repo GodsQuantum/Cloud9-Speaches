@@ -97,6 +97,7 @@ def create_gradio_demo(config: Config) -> gr.Blocks:
         create_tts_tab(config, api_key_input)
         if __import__("os").environ.get("CLOUD9_PORTABLE_MODE") == "1":
             from speaches.ui.tabs.desktop_models import create_model_manager_tab
+
             create_model_manager_tab()
 
     return demo

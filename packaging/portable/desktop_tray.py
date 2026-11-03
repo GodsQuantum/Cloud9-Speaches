@@ -1,5 +1,6 @@
 # Copyright (c) 2026 GodsQuantum
 """Native per-user desktop tray. No polling daemon, no network listener beyond Speaches."""
+
 from __future__ import annotations
 
 import contextlib
@@ -24,6 +25,7 @@ def _startup_file() -> Path:
 def startup_enabled() -> bool:
     if os.name == "nt":
         import winreg
+
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run") as key:
                 winreg.QueryValueEx(key, "Cloud9-Speaches")
@@ -36,6 +38,7 @@ def startup_enabled() -> bool:
 def set_startup(enabled: bool) -> None:
     if os.name == "nt":
         import winreg
+
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run") as key:
             if enabled:
                 winreg.SetValueEx(key, "Cloud9-Speaches", 0, winreg.REG_SZ, f'"{sys.executable}"')
@@ -50,15 +53,17 @@ def set_startup(enabled: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if sys.platform == "darwin":
         with path.open("wb") as stream:
-            plistlib.dump({
-                "Label": APP_ID, "ProgramArguments": [sys.executable],
-                "RunAtLoad": True, "KeepAlive": False
-            }, stream)
+            plistlib.dump(
+                {"Label": APP_ID, "ProgramArguments": [sys.executable], "RunAtLoad": True, "KeepAlive": False}, stream
+            )
     else:
         # Desktop-file launch syntax (quoted paths, no shell expansion).
         exe = str(Path(sys.executable).resolve()).replace("\\", "\\\\").replace('"', '\\"')
-        path.write_text(f'[Desktop Entry]\nType=Application\nName=Cloud9-Speaches\nExec="{exe}"\n'
-                        'Terminal=false\nX-GNOME-Autostart-enabled=true\n', encoding="utf-8")
+        path.write_text(
+            f'[Desktop Entry]\nType=Application\nName=Cloud9-Speaches\nExec="{exe}"\n'
+            "Terminal=false\nX-GNOME-Autostart-enabled=true\n",
+            encoding="utf-8",
+        )
 
 
 def icon_file() -> Path:
@@ -89,14 +94,18 @@ def run_tray(port: int) -> None:
     worker = threading.Thread(target=server.run, name="Cloud9-Speaches API", daemon=False)
     worker.start()
     url = f"http://127.0.0.1:{port}/"
+
     def open_ui(_icon: object, _item: object) -> None:
         webbrowser.open(url)
+
     def toggle_startup(icon: pystray.Icon, _item: object) -> None:
         set_startup(not startup_enabled())
         icon.update_menu()
+
     def hide_icon(icon: pystray.Icon, _item: object) -> None:
         # Hide only for this session; relaunching the app restores its tray.
         icon.visible = False
+
     def quit_app(icon: pystray.Icon, _item: object) -> None:
         server.should_exit = True
         icon.stop()
@@ -108,12 +117,12 @@ def run_tray(port: int) -> None:
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quitter", quit_app),
     )
-    icon = pystray.Icon("Cloud9-Speaches", Image.open(icon_file()).convert("RGBA"),
-                       "Cloud9-Speaches (local)", menu)
+    icon = pystray.Icon("Cloud9-Speaches", Image.open(icon_file()).convert("RGBA"), "Cloud9-Speaches (local)", menu)
     inbox = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     inbox.bind(("127.0.0.1", 0))
     ipc_path = Path(os.environ["HF_HOME"]).parent.parent / "tray-ipc.port"
     ipc_path.write_text(str(inbox.getsockname()[1]), encoding="ascii")
+
     def receive_show() -> None:
         while True:
             try:
@@ -122,6 +131,7 @@ def run_tray(port: int) -> None:
                     icon.visible = True
             except OSError:
                 break
+
     threading.Thread(target=receive_show, name="Cloud9-Speaches tray activation", daemon=True).start()
     try:
         # Main-thread icon loop is mandatory for macOS Cocoa.
