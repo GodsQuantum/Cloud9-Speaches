@@ -1,3 +1,4 @@
+# Copyright (c) 2026 GodsQuantum
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -18,8 +19,12 @@ from speaches.executors.kokoro import KokoroModel, KokoroModelVoice
 from speaches.executors.piper import PiperModel
 from speaches.hf_utils import delete_local_model_repo
 from speaches.model_aliases import ModelId
+from speaches.ui.desktop_asr_api import router as desktop_asr_router
 
 router = APIRouter(tags=["models"])
+
+router.include_router(desktop_asr_router)
+
 
 # TODO: should model aliases be listed?
 
