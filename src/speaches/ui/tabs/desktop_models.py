@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import shutil
 import subprocess
 
@@ -128,3 +129,28 @@ def create_model_manager_tab() -> None:
             "Le modèle doit être sélectionné séparément dans l'onglet transcription. "
             "Ce catalogue est multilingue ; vérifier la précision sur vos enregistrements."
         )
+
+        gr.Markdown("## Couplage direct avec ScribeWatch")
+        gr.Markdown(
+            "ScribeWatch demande actuellement **Whisper Large-v3 Turbo GGUF Q6_K (~693 Mo)** et "
+            "**FastConformer français Q4_K (~70 Mo)** pour vérifier la transcription et alignement. "
+            "Ce pack est facultatif si vous utilisez Speaches seul. Une connexion Internet est nécessaire "
+            "uniquement pour le téléchargement initial. Vérifiez la vitesse réelle sur votre CPU."
+        )
+        bundle = gr.Button("Installer le pack ScribeWatch — transcription + alignement")
+        bundle_status = gr.Textbox(label="Installation du pack ScribeWatch", interactive=False)
+
+        def install_scribewatch_bundle() -> str:
+            # Reuse pinned, atomic, SHA-256-verified native bootstrap; no
+            # duplicated model URLs, no unpinned GGUF downloads.
+            from default_models import install_defaults
+
+            align_root = Path(os.environ["ALIGN_MODEL_ROOT"])
+            hf_home = Path(os.environ["HF_HOME"])
+            try:
+                install_defaults(align_root, hf_home, only="both")
+            except Exception as exc:
+                raise gr.Error(f"Installation du pack impossible : {type(exc).__name__}") from exc
+            return "Pack ScribeWatch installé et SHA-256 vérifié. Dans ScribeWatch > Providers, cliquez sur Connect Cloud9-Speaches (http://127.0.0.1:8005)."
+
+        bundle.click(install_scribewatch_bundle, outputs=bundle_status)
