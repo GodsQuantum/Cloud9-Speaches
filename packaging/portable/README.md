@@ -77,3 +77,22 @@ Apple Silicon uses Metal plus CPU; Intel Mac uses CPU. CUDA remains an
 optional provider and cannot be certified until tested with NVIDIA hardware.
 These are backend *capabilities*; an actual GGUF must be downloaded separately
 and a real audio fixture processed before certifying inference performance.
+
+## Desktop ASR model catalogue and custom sources
+
+The existing Whisper CT2 catalogue and ScribeWatch pinned acoustic pack remain unchanged.
+Under the download-models tab, a GGUF picker includes Parakeet Ultra, Qwen3-ASR
+0.6B and 1.7B, and Nemotron 3.5 ASR. Choose a Hugging Face quantization, or enter
+a public Hugging Face repository URL, including direct /blob/ or /resolve/ file URLs.
+Selected quantizations are recorded in user data; weights live in the HF Hub cache.
+
+A public GitHub Release direct GGUF URL can be imported using its SHA-256.
+Redirects only allow known public GitHub asset hosts; HTTP, local URLs, missing
+hashes and downloads larger than 12 GiB are rejected. These files live under
+HF_HOME/custom-asr and show under custom/model-id in the desktop native registry.
+
+Only GGUF models built for transcribe.cpp are usable. Llama.cpp chat GGUF,
+raw .nemo checkpoints and arbitrary Hugging Face files do not become compatible
+by downloading. Validate every new model with actual audio and language/timestamp
+quality checks. No clinical examples, patient data or weight files in the installer.
+Desktop-only CLOUD9_PORTABLE_MODE=1. Cloud9 CT410 is unchanged.
