@@ -85,7 +85,7 @@ def request_show() -> bool:
 
 def run_tray(port: int) -> None:
     from PIL import Image
-    import pystray
+    import pystray  # pyrefly: ignore[missing-import] - optional desktop-only packaging dependency
     import uvicorn
 
     from speaches.main import create_app
