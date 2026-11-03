@@ -109,9 +109,12 @@ def build_candidate() -> Path:
         "--name",
         NAME,
         *(["--windowed"] if target == "windows-amd64" else []),
-        "--icon", HERE / "assets" / "app.ico" if target.startswith("windows") else HERE / "assets" / "app.png",
-        "--add-data", f"{HERE / 'assets' / 'app.png'}:assets",
-        "--collect-all", "pystray",
+        "--icon",
+        HERE / "assets" / "app.ico" if target.startswith("windows") else HERE / "assets" / "app.png",
+        "--add-data",
+        f"{HERE / 'assets' / 'app.png'}:assets",
+        "--collect-all",
+        "pystray",
         "--paths",
         ROOT / "src",
         "--add-data",
@@ -198,8 +201,18 @@ def build_candidate() -> Path:
             for scale in (1, 2):
                 pixels = size * scale
                 suffix = "@2x" if scale == 2 else ""
-                run("sips", "-s", "format", "png", "-z", str(pixels), str(pixels),
-                    HERE / "assets" / "app.png", "--out", iconset / f"icon_{size}x{size}{suffix}.png")
+                run(
+                    "sips",
+                    "-s",
+                    "format",
+                    "png",
+                    "-z",
+                    str(pixels),
+                    str(pixels),
+                    HERE / "assets" / "app.png",
+                    "--out",
+                    iconset / f"icon_{size}x{size}{suffix}.png",
+                )
         run("iconutil", "-c", "icns", iconset, "-o", resource / "AppIcon.icns")
         shutil.rmtree(iconset)
         with (app / "Contents" / "Info.plist").open("wb") as file:
