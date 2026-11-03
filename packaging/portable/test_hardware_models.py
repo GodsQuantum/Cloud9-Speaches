@@ -28,3 +28,13 @@ def test_unknown_or_low_gpu_vram_never_auto_recommends_large_v3() -> None:
     assert recommend(32, gpu=True, goal="Précision") == "Systran/faster-whisper-medium"
     assert recommend(32, gpu=True, goal="Précision", vram_gb=4) == "Systran/faster-whisper-medium"
     assert recommend(32, gpu=True, goal="Précision", vram_gb=8) == "Systran/faster-whisper-large-v3"
+
+
+def test_scribewatch_bundle_is_single_verified_native_path() -> None:
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[2] / "src/speaches/ui/tabs/desktop_models.py").read_text()
+    assert "from default_models import install_defaults" in source
+    assert 'install_defaults(align_root, hf_home, only="both")' in source
+    assert "Installer le pack ScribeWatch" in source
+    assert "FastConformer" in source
