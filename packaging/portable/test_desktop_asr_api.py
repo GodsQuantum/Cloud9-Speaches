@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -72,8 +73,7 @@ def test_desktop_api_disabled_in_container(monkeypatch: pytest.MonkeyPatch) -> N
     assert error.value.status_code == 404
 
 
-@pytest.mark.asyncio
-async def test_discovers_only_native_gguf_variants_without_weights(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_discovers_only_native_gguf_variants_without_weights(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLOUD9_PORTABLE_MODE", "1")
     monkeypatch.setenv("UVICORN_PORT", "38005")
 
@@ -84,15 +84,16 @@ async def test_discovers_only_native_gguf_variants_without_weights(monkeypatch: 
         patch("speaches.ui.custom_asr.list_hf_gguf", return_value=[("Quantification Q8_0", "test-Q8_0.gguf")]),
         patch("speaches.ui.desktop_asr_api.run_in_threadpool", side_effect=run_sync),
     ):
-        response = await desktop_asr_variants(
-            request_for(host="127.0.0.1:38005"),
-            DesktopAsrLookup(source="handy-computer/parakeet-ultra-gguf"),
+        response = asyncio.run(
+            desktop_asr_variants(
+                request_for(host="127.0.0.1:38005"),
+                DesktopAsrLookup(source="handy-computer/parakeet-ultra-gguf"),
+            )
         )
     assert response["variants"] == [{"label": "Quantification Q8_0", "filename": "test-Q8_0.gguf"}]
 
 
-@pytest.mark.asyncio
-async def test_import_delegates_to_existing_hf_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_delegates_to_existing_hf_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLOUD9_PORTABLE_MODE", "1")
     monkeypatch.setenv("UVICORN_PORT", "38005")
 
@@ -103,9 +104,11 @@ async def test_import_delegates_to_existing_hf_cache(monkeypatch: pytest.MonkeyP
         patch("speaches.ui.custom_asr.install_hf_gguf", return_value="Model installed") as download,
         patch("speaches.ui.desktop_asr_api.run_in_threadpool", side_effect=run_sync),
     ):
-        response = await desktop_asr_install(
-            request_for(host="127.0.0.1:38005"),
-            DesktopAsrInstall(source="handy-computer/parakeet-ultra-gguf", filename="test-Q8_0.gguf"),
+        response = asyncio.run(
+            desktop_asr_install(
+                request_for(host="127.0.0.1:38005"),
+                DesktopAsrInstall(source="handy-computer/parakeet-ultra-gguf", filename="test-Q8_0.gguf"),
+            )
         )
     assert response["status"] == "installed"
     download.assert_called_once_with("handy-computer/parakeet-ultra-gguf", "test-Q8_0.gguf")
