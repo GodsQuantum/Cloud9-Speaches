@@ -2,16 +2,20 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 from pathlib import Path
 import platform
 import plistlib
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 import zipfile
 
 from fetch_crispasr import acquire
@@ -25,6 +29,82 @@ HERE = Path(__file__).resolve().parent
 def run(*args: str | Path, timeout: int = 1800, cwd: Path | None = None) -> None:
     logger.info("Running %s", [str(arg) for arg in args])
     subprocess.run([str(a) for a in args], check=True, timeout=timeout, cwd=cwd)
+
+
+def smoke_frozen_app(executable: Path, scratch: Path) -> None:
+    """Start the exact desktop binary, not a nested PyInstaller executable.
+
+    Verify real FastAPI /health, alignment and an EMPTY first-run HuggingFace
+    cache. Bound runtime and print only the test's local diagnostic files.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    isolated = scratch / "smoke-user-data"
+    env = dict(os.environ)
+    for key in ("HF_HOME", "HF_HUB_CACHE", "ALIGN_MODEL_ROOT"):
+        env.pop(key, None)
+    env["CLOUD9_PORTABLE_DATA_DIR"] = str(isolated)
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    native_log = scratch / "frozen-stdout.log"
+    success = False
+    diagnostic = "did not start"
+    with native_log.open("w", encoding="utf-8") as output:
+        process = subprocess.Popen(
+            [str(executable), "--no-browser", "--no-tray", "--port", str(port)],
+            env=env,
+            cwd=scratch,
+            stdin=subprocess.DEVNULL,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+        )
+        try:
+            deadline = time.monotonic() + 140
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    diagnostic = f"exe exited {process.returncode}"
+                    break
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2) as res:
+                        if res.status != 200:
+                            continue
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/v1/audio/alignment/health", timeout=2) as res:
+                        if res.status != 200:
+                            continue
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/v1/models", timeout=5) as res:
+                        if res.status != 200:
+                            continue
+                        models = json.loads(res.read())
+                        if models.get("object") != "list":
+                            raise RuntimeError(f"Invalid /v1/models schema: {models!r}")
+                    success = True
+                    break
+                except (OSError, urllib.error.URLError) as error:
+                    diagnostic = f"API probe {type(error).__name__}: {error}"
+                time.sleep(0.6)
+            if not success:
+                diagnostic = diagnostic + "; timed out waiting for all three endpoints"
+        finally:
+            if process.poll() is None:
+                process.terminate()
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=15)
+    if not success:
+        desktop_log = isolated / "desktop.log"
+        for logfile in (desktop_log, native_log):
+            if logfile.is_file():
+                logger.error(
+                    "FROZEN_SMOKE_DIAGNOSTICS %s: %s", logfile.name, logfile.read_text(errors="replace")[-6000:]
+                )
+        raise RuntimeError(f"Frozen desktop server smoke failed: {diagnostic}")
+    logger.info(
+        "SPEACHES_PORTABLE_API_SMOKE_OK os=%s port=%d /health /v1/audio/alignment/health /v1/models",
+        platform.system(),
+        port,
+    )
 
 
 def variant() -> str:
@@ -170,7 +250,7 @@ def build_candidate() -> Path:
     with tempfile.TemporaryDirectory(prefix="trio-speaches-no-source-cwd-") as independent:
         run(frozen, "--check-install", timeout=180, cwd=Path(independent))
         if os.getenv("PORTABLE_E2E_SMOKE", "1") == "1":
-            run(frozen, "--smoke", "--port", "39085", timeout=180, cwd=Path(independent))
+            smoke_frozen_app(frozen, Path(independent))
     logger.info("SPEACHES_PORTABLE_CHECK_PASS %s", target)
     if target.startswith("macos"):
         app = stage / (NAME + ".app")
