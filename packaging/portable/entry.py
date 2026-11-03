@@ -155,19 +155,22 @@ def main() -> None:
     if port_is_busy(args.port):
         if not args.no_tray:
             from desktop_tray import request_show
+
             if request_show():
                 return
         raise RuntimeError(f"Port {args.port} in use; do not start a second server")
     if not args.no_tray and (
-        platform.system() in ("Windows", "Darwin") or
-        (platform.system() == "Linux" and (os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY")))
+        platform.system() in ("Windows", "Darwin")
+        or (platform.system() == "Linux" and (os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY")))
     ):
         from desktop_tray import run_tray
+
         run_tray(args.port)
     else:
         import uvicorn
 
         from speaches.main import create_app
+
         if not args.no_browser:
             webbrowser.open(f"http://127.0.0.1:{args.port}/")
         uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="info")
