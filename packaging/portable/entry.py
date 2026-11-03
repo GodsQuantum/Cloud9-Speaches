@@ -9,6 +9,7 @@ import platform
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -19,6 +20,8 @@ APP = "Cloud9-Speaches"
 
 
 def app_dir() -> Path:
+    if override := os.getenv("CLOUD9_PORTABLE_DATA_DIR"):
+        return Path(override).expanduser().resolve()
     if platform.system() == "Windows":
         base = Path(os.environ["LOCALAPPDATA"])
     elif platform.system() == "Darwin":
@@ -26,6 +29,25 @@ def app_dir() -> Path:
     else:
         base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     return base / APP
+
+
+def ensure_logging_streams() -> None:
+    """PyInstaller --windowed sets sys.stdout/stderr to None on Windows.
+
+    Gradio, Uvicorn and their dependencies assume valid standard streams.
+    Redirect GUI diagnostics to the per-user desktop log, never a console.
+    """
+    if sys.stdin is not None and sys.stdout is not None and sys.stderr is not None:
+        return
+    root = app_dir()
+    root.mkdir(parents=True, exist_ok=True)
+    stream = (root / "desktop.log").open("a", encoding="utf-8", buffering=1)
+    if sys.stdin is None:
+        sys.stdin = Path(os.devnull).open(encoding="utf-8")  # noqa: SIM115 - application-lifetime stream
+    if sys.stdout is None:
+        sys.stdout = stream
+    if sys.stderr is None:
+        sys.stderr = stream
 
 
 def runtime_dir() -> Path:
@@ -96,34 +118,50 @@ def port_is_busy(port: int) -> bool:
 def run_smoke(port: int) -> None:
     if port_is_busy(port):
         raise RuntimeError(f"Port {port} already in use; refusing to validate another process")
-    child = subprocess.Popen([sys.executable, "--no-browser", "--no-tray", "--port", str(port)])
-    try:
-        for _ in range(180):
-            if child.poll() is not None:
-                raise RuntimeError(f"Cloud9-Speaches process exited: {child.returncode}")
-            try:
-                with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2) as response:
-                    if response.status == 200:
-                        with urllib.request.urlopen(
-                            f"http://127.0.0.1:{port}/v1/audio/alignment/health", timeout=2
-                        ) as alignment:
-                            if alignment.status == 200:
-                                logger.info("SPEACHES_PORTABLE_API_SMOKE_OK port=%d", port)
-                                return
-            except (OSError, urllib.error.URLError):
-                pass
-            time.sleep(0.5)
-        raise RuntimeError("FastAPI/Gradio server did not become healthy")
-    finally:
-        child.terminate()
+    # Exercise a separate frozen executable, not an in-process mock server.
+    # The old smoke inherited invalid Windows GUI standard handles and could
+    # hang the build after leaving a child holding the test directory open.
+    with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as output:
+        child = subprocess.Popen(
+            [sys.executable, "--no-browser", "--no-tray", "--port", str(port)],
+            stdin=subprocess.DEVNULL,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+        )
         try:
-            child.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            child.kill()
-            child.wait(timeout=15)
+            deadline = time.monotonic() + 110
+            while time.monotonic() < deadline:
+                if child.poll() is not None:
+                    raise RuntimeError(f"Cloud9-Speaches process exited: {child.returncode}")
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2) as response:
+                        if response.status == 200:
+                            with urllib.request.urlopen(
+                                f"http://127.0.0.1:{port}/v1/audio/alignment/health", timeout=2
+                            ) as alignment:
+                                if alignment.status == 200:
+                                    logger.info("SPEACHES_PORTABLE_API_SMOKE_OK port=%d", port)
+                                    return
+                except (OSError, urllib.error.URLError):
+                    pass
+                time.sleep(0.5)
+            raise RuntimeError("FastAPI/Gradio server did not become healthy in 110 seconds")
+        finally:
+            if child.poll() is None:
+                child.terminate()
+            try:
+                child.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=15)
+            output.seek(0)
+            diagnostic = output.read()
+            if diagnostic:
+                logger.info("SPEACHES_CHILD_SMOKE_LOG: %s", diagnostic[-2500:])
 
 
 def main() -> None:
+    ensure_logging_streams()
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=int(os.getenv("UVICORN_PORT", "8005")))
     parser.add_argument("--no-browser", action="store_true")
@@ -177,4 +215,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # PyInstaller --windowed otherwise displays a blocking crash dialog.
+        # Production errors stay in LOCALAPPDATA/Cloud9-Speaches/desktop.log.
+        ensure_logging_streams()
+        logger.exception("Cloud9-Speaches failed to start")
+        raise SystemExit(1) from None
