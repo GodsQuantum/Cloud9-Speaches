@@ -7,6 +7,7 @@ from typing import TypedDict
 
 import huggingface_hub
 from huggingface_hub.constants import HF_HUB_CACHE
+from huggingface_hub.errors import CacheNotFound
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,11 @@ class HfModelFilter(BaseModel):
 
 
 def get_cached_model_repos_info() -> list[huggingface_hub.CachedRepoInfo]:
-    hf_cache_info = huggingface_hub.scan_cache_dir()
+    try:
+        hf_cache_info = huggingface_hub.scan_cache_dir()
+    except CacheNotFound:
+        # An empty first-run cache is normal, not an API failure.
+        return []
     cache_repos_info = [repo for repo in list(hf_cache_info.repos) if repo.repo_type == "model"]
     return cache_repos_info
 
@@ -146,7 +151,7 @@ def get_model_repo_path(model_id: str, *, cache_dir: str | Path | None = None) -
 
     cache_dir = Path(cache_dir).expanduser().resolve()
     if not cache_dir.exists():
-        raise huggingface_hub.CacheNotFound(
+        raise CacheNotFound(
             f"Cache directory not found: {cache_dir}. Please use `cache_dir` argument or set `HF_HUB_CACHE` environment variable.",
             cache_dir=cache_dir,
         )
