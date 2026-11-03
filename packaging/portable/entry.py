@@ -40,7 +40,7 @@ def configure(port: int) -> Path:
     base = app_dir()
     models = base / "models"
     cache = base / "cache"
-    for path in (base, models, cache):
+    for path in (base, models, cache, cache / "huggingface" / "hub"):
         path.mkdir(parents=True, exist_ok=True)
     bundle = runtime_dir()
     binary = bundle / "bin" / ("crispasr.exe" if os.name == "nt" else "crispasr")
@@ -49,7 +49,10 @@ def configure(port: int) -> Path:
     path_entry = str(bundle / "bin")
     os.environ["PATH"] = path_entry + os.pathsep + os.getenv("PATH", "")
     os.environ.setdefault("HF_HOME", str(cache / "huggingface"))
+    os.environ.setdefault("HF_HUB_CACHE", str(Path(os.environ["HF_HOME"]) / "hub"))
+    Path(os.environ["HF_HUB_CACHE"]).mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("ALIGN_MODEL_ROOT", str(models / "aligners"))
+    os.environ.setdefault("CLOUD9_PORTABLE_MODE", "1")
     os.environ.setdefault("CLOUD9_NATIVE_CTC_ENABLED", "1")
     os.environ.setdefault("CLOUD9_CTC_BACKEND", "cpu")
     os.environ.setdefault("CLOUD9_TRANSCRIBE_CPP_PREFERRED_QUANT", "Q6_K")
@@ -93,7 +96,7 @@ def port_is_busy(port: int) -> bool:
 def run_smoke(port: int) -> None:
     if port_is_busy(port):
         raise RuntimeError(f"Port {port} already in use; refusing to validate another process")
-    child = subprocess.Popen([sys.executable, "--no-browser", "--port", str(port)])
+    child = subprocess.Popen([sys.executable, "--no-browser", "--no-tray", "--port", str(port)])
     try:
         for _ in range(180):
             if child.poll() is not None:
@@ -124,6 +127,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=int(os.getenv("UVICORN_PORT", "8005")))
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--no-tray", action="store_true", help="Headless server without desktop tray")
     parser.add_argument("--check-install", action="store_true")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--install-default-models", action="store_true")
@@ -149,14 +153,23 @@ def main() -> None:
         return
     configure(args.port)
     if port_is_busy(args.port):
-        raise RuntimeError(f"Port {args.port} in use; do not open another app's server")
-    import uvicorn
-
-    from speaches.main import create_app
-
-    if not args.no_browser:
-        webbrowser.open(f"http://127.0.0.1:{args.port}/")
-    uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="info")
+        if not args.no_tray:
+            from desktop_tray import request_show
+            if request_show():
+                return
+        raise RuntimeError(f"Port {args.port} in use; do not start a second server")
+    if not args.no_tray and (
+        platform.system() in ("Windows", "Darwin") or
+        (platform.system() == "Linux" and (os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY")))
+    ):
+        from desktop_tray import run_tray
+        run_tray(args.port)
+    else:
+        import uvicorn
+        from speaches.main import create_app
+        if not args.no_browser:
+            webbrowser.open(f"http://127.0.0.1:{args.port}/")
+        uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="info")
 
 
 if __name__ == "__main__":

@@ -108,6 +108,10 @@ def build_candidate() -> Path:
         "--clean",
         "--name",
         NAME,
+        *(["--windowed"] if target == "windows-amd64" else []),
+        "--icon", HERE / "assets" / "app.ico" if target.startswith("windows") else HERE / "assets" / "app.png",
+        "--add-data", f"{HERE / 'assets' / 'app.png'}:assets",
+        "--collect-all", "pystray",
         "--paths",
         ROOT / "src",
         "--add-data",
@@ -186,7 +190,18 @@ def build_candidate() -> Path:
             "CFBundleVersion": "1",
             "CFBundlePackageType": "APPL",
             "LSMinimumSystemVersion": "11.0",
+            "CFBundleIconFile": "AppIcon",
         }
+        iconset = resource / "AppIcon.iconset"
+        iconset.mkdir()
+        for size in (16, 32, 128, 256, 512):
+            for scale in (1, 2):
+                pixels = size * scale
+                suffix = "@2x" if scale == 2 else ""
+                run("sips", "-s", "format", "png", "-z", str(pixels), str(pixels),
+                    HERE / "assets" / "app.png", "--out", iconset / f"icon_{size}x{size}{suffix}.png")
+        run("iconutil", "-c", "icns", iconset, "-o", resource / "AppIcon.icns")
+        shutil.rmtree(iconset)
         with (app / "Contents" / "Info.plist").open("wb") as file:
             plistlib.dump(plist, file)
         with tempfile.TemporaryDirectory(prefix="trio-speaches-macos-installed-") as independent:
@@ -208,6 +223,7 @@ def build_candidate() -> Path:
             "/V2",
             "/DSTAGING=" + str(ffmpeg),
             "/DOUTPUT=" + str(installer),
+            "/DAPP_ICON=" + str(HERE / "assets" / "app.ico"),
             HERE / "installer.nsi",
         )
         with tempfile.TemporaryDirectory(prefix="trio-speaches-installed-") as installed_parent:
