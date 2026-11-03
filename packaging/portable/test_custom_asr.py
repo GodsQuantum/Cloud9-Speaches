@@ -95,11 +95,18 @@ def test_external_url_must_be_public_github_release() -> None:
             _safe_public_url(bad)
 
 
+class _FakeResponse(BytesIO):
+    headers: dict[str, str]
+
+    def __init__(self, payload: bytes, headers: dict[str, str] | None = None) -> None:
+        super().__init__(payload)
+        self.headers = headers or {}
+
+
 def test_external_gguf_sha256_install_and_discovery(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HF_HOME", str(tmp_path))
     payload = b"GGUF" + b"synthetic-fixture" * 5
-    response = BytesIO(payload)
-    response.headers = {"Content-Length": str(len(payload))}
+    response = _FakeResponse(payload, {"Content-Length": str(len(payload))})
     opener = SimpleNamespace(open=lambda _request, **_kwargs: response)
     source = "https://github.com/org/repo/releases/download/v1/fake-Q8_0.gguf"
     with patch("speaches.ui.custom_asr.build_opener", return_value=opener):
@@ -117,8 +124,7 @@ def test_external_gguf_sha256_install_and_discovery(monkeypatch: pytest.MonkeyPa
 
 def test_bad_checksum_does_not_publish_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HF_HOME", str(tmp_path))
-    response = BytesIO(b"wrong")
-    response.headers = {}
+    response = _FakeResponse(b"wrong")
     opener = SimpleNamespace(open=lambda _request, **_kwargs: response)
     with patch("speaches.ui.custom_asr.build_opener", return_value=opener), pytest.raises(ValueError, match="SHA-256"):
         install_github_gguf("https://github.com/org/repo/releases/download/v1/fake-Q8_0.gguf", "a" * 64)
