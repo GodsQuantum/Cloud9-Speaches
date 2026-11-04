@@ -1,4 +1,5 @@
 """Regression: keep verified ASR window boundaries after forced CTC alignment."""
+
 from types import SimpleNamespace
 
 import pytest
