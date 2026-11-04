@@ -376,7 +376,10 @@ def optionally_align_words(result: Any, *, request: Any, language: str | None) -
         model=getattr(request, "alignment_model", None),
     )
     segments = tuple(getattr(result, "segments", ()) or ())
-    if not native_valid or not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
+    # Native word timing validity and ASR segment timing validity are independent.
+    # Preserve genuine windows after forced alignment so long recordings are not
+    # collapsed into a single segment beyond downstream CTC alignment limits.
+    if not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
         segments = (SimpleNamespace(text=result.text, t0_ms=words[0].t0_ms, t1_ms=words[-1].t1_ms),)
     return SimpleNamespace(
         text=result.text,
