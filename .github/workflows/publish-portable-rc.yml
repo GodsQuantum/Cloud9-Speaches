@@ -134,7 +134,7 @@ jobs:
         run: |
           set -euo pipefail
           cat >release-notes.md <<EOF
-          Cloud9-Speaches Desktop 0.1.0 RC6 — standalone portable native candidates.
+          Cloud9-Speaches Desktop $RELEASE_TAG — standalone portable native candidates.
 
           - Windows x64 installer + ZIP, Linux x64/ARM64 ZIP, macOS Intel/Apple Silicon DMG.
           - Exact tested source: $SOURCE_SHA (GitHub Actions portable run $SOURCE_RUN_ID).
@@ -146,7 +146,7 @@ jobs:
           - Production CT410 and GHCR latest images are unchanged.
           EOF
           gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Cloud9-Speaches Desktop 0.1.0 RC6 (unsigned native, Sigstore)" \
+            --title "Cloud9-Speaches Desktop $RELEASE_TAG (unsigned native, Sigstore)" \
             --prerelease --draft --notes-file release-notes.md
           gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" release/*
 
@@ -163,9 +163,9 @@ jobs:
           repo = os.environ["GITHUB_REPOSITORY"]
           tag = os.environ["RELEASE_TAG"]
           data = json.loads(subprocess.check_output(
-              ["gh", "api", f"repos/{repo}/releases/tags/{tag}"], text=True
+              ["gh", "release", "view", tag, "-R", repo, "--json", "isDraft,assets"], text=True
           ))
-          assert data["draft"], "Never mutate published release"
+          assert data["isDraft"], "Never mutate published release"
           assets = {a["name"]: a for a in data["assets"]}
           local = {p.name: p for p in Path("release").iterdir() if p.is_file()}
           assert len(local) == 12 and assets.keys() == local.keys(), (assets.keys(), local.keys())
