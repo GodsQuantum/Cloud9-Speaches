@@ -1,0 +1,183 @@
+name: Publish verified portable desktop RC
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: New immutable desktop release tag (desktop-v0.1.0-rc.N)
+        type: string
+        required: true
+      source_run_id:
+        description: Successful portable build workflow run ID
+        type: string
+        required: true
+      source_sha:
+        description: Exact tested source commit
+        type: string
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: portable-rc-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify, attest and publish six native binaries
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - name: Checkout immutable release target
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify source run, expected tag and release target
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^desktop-v0\.1\.0-rc\.[0-9]+$ ]]
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .head_sha)" = "$SOURCE_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .conclusion)" = success
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .name)" = "Cloud9-Speaches native portable candidate"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Tag already exists, refusing to modify it"
+            exit 1
+          fi
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release already exists"
+            exit 1
+          fi
+          echo "SOURCE_RUN_VERIFIED $SOURCE_RUN_ID $SOURCE_SHA release_target=$GITHUB_SHA"
+
+      - name: Download five successful platform artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          pattern: cloud9-speaches-portable-*
+          path: candidates
+          merge-multiple: false
+
+      - name: Validate six binaries and six independent SHA256 files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import re
+          import shutil
+          expected = {
+            "Cloud9-Speaches-linux-amd64.zip",
+            "Cloud9-Speaches-linux-arm64.zip",
+            "Cloud9-Speaches-macos-amd64.dmg",
+            "Cloud9-Speaches-macos-arm64.dmg",
+            "Cloud9-Speaches-windows-amd64.zip",
+            "Cloud9-Speaches-windows-amd64-setup.exe",
+          }
+          candidate_root = Path("candidates")
+          artifact_names = {p.name for p in candidate_root.iterdir() if p.is_dir()}
+          expected_artifacts = {
+            "cloud9-speaches-portable-ubuntu-24.04",
+            "cloud9-speaches-portable-ubuntu-24.04-arm",
+            "cloud9-speaches-portable-macos-15",
+            "cloud9-speaches-portable-macos-15-intel",
+            "cloud9-speaches-portable-windows-2025",
+          }
+          assert artifact_names == expected_artifacts, (artifact_names, expected_artifacts)
+          paths = [p for p in candidate_root.rglob("*") if p.is_file()]
+          assert len(paths) == 12, [(str(p), p.stat().st_size) for p in paths]
+          names = [p.name for p in paths]
+          assert len(set(names)) == 12, "Duplicated asset names"
+          assert set(names) == expected | {x + ".sha256" for x in expected}, set(names)
+          out = Path("release")
+          out.mkdir()
+          for src in paths:
+              shutil.move(src, out / src.name)
+          for name in sorted(expected):
+              item = out / name
+              checksum = (out / (name + ".sha256")).read_text().strip()
+              match = re.fullmatch(r"([a-fA-F0-9]{64})\s+\*?([^\s]+)", checksum)
+              assert match and match.group(2) == name, (name, checksum)
+              h = sha256()
+              with item.open("rb") as reader:
+                  for chunk in iter(lambda: reader.read(8 * 1024 * 1024), b""):
+                      h.update(chunk)
+              assert h.hexdigest().lower() == match.group(1).lower(), name
+              print("SHA256_VERIFIED", name, item.stat().st_size, h.hexdigest())
+          print("SIX_NATIVE_BINARIES_AND_SHA256_VERIFIED")
+          PY
+
+      - name: Sigstore provenance attestation for verified portable files
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release/*
+
+      - name: Create immutable draft release and upload verified files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >release-notes.md <<EOF
+          Cloud9-Speaches Desktop 0.1.0 RC6 — standalone portable native candidates.
+
+          - Windows x64 installer + ZIP, Linux x64/ARM64 ZIP, macOS Intel/Apple Silicon DMG.
+          - Exact tested source: $SOURCE_SHA (GitHub Actions portable run $SOURCE_RUN_ID).
+          - Integrated main target: $GITHUB_SHA, verified source tree against tested PR head before release workflow.
+          - Each native package includes an independently validated .sha256 sidecar.
+          - GitHub Actions Sigstore provenance attestations accompany these files.
+          - Unsigned native OS packages: Windows Authenticode and Apple Developer ID notarization are NOT claimed.
+          - Runtime ML models are acquired separately; physical hardware/microphone certification remains external.
+          - Production CT410 and GHCR latest images are unchanged.
+          EOF
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Cloud9-Speaches Desktop 0.1.0 RC6 (unsigned native, Sigstore)" \
+            --prerelease --draft --notes-file release-notes.md
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" release/*
+
+      - name: Audit remote GitHub digests and make release public
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+          import os
+          import subprocess
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tag = os.environ["RELEASE_TAG"]
+          data = json.loads(subprocess.check_output(
+              ["gh", "api", f"repos/{repo}/releases/tags/{tag}"], text=True
+          ))
+          assert data["draft"], "Never mutate published release"
+          assets = {a["name"]: a for a in data["assets"]}
+          local = {p.name: p for p in Path("release").iterdir() if p.is_file()}
+          assert len(local) == 12 and assets.keys() == local.keys(), (assets.keys(), local.keys())
+          for name, path in local.items():
+              h = hashlib.sha256()
+              with path.open("rb") as stream:
+                  for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+                      h.update(block)
+              assert assets[name]["digest"] == "sha256:" + h.hexdigest(), name
+              assert assets[name]["size"] == path.stat().st_size, name
+          print("GITHUB_REMOTE_DIGESTS_12_OF_12_MATCH")
+          PY
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=true
+          test "$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = false
+          echo "RC6_PUBLICATION_VERIFIED"
