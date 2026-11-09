@@ -199,6 +199,8 @@ def build_candidate() -> Path:
         ROOT / "src",
         "--add-data",
         f"{ROOT / 'realtime-console' / 'dist'}:realtime-console/dist",
+        "--add-data",
+        f"{ROOT / 'model_aliases.json'}:.",
         "--collect-all",
         "speaches",
         "--collect-all",
@@ -217,7 +219,7 @@ def build_candidate() -> Path:
         "lightning_fabric",
         "--collect-submodules",
         "onnx_asr",
-        "--collect-submodules",
+        "--collect-all",
         "faster_whisper",
         "--collect-all",
         "transcribe_cpp",
@@ -239,6 +241,15 @@ def build_candidate() -> Path:
     )
     frozen = ffmpeg / (NAME + (".exe" if os.name == "nt" else ""))
     assert frozen.is_file(), frozen
+    # Packaging smoke must catch missing files before publishing a release.
+    internal = ffmpeg / "_internal"
+    for required in (
+        internal / "model_aliases.json",
+        internal / "faster_whisper" / "assets" / "silero_encoder_v5.onnx",
+        internal / "faster_whisper" / "assets" / "silero_decoder_v5.onnx",
+    ):
+        if not required.is_file() or required.stat().st_size == 0:
+            raise RuntimeError(f"Missing frozen acoustic resource: {required}")
     bin_dir = ffmpeg / "bin"
     # The external acoustic alignment engine is a real upstream executable.
     # Models remain in per-user storage and are never written into the signed app.

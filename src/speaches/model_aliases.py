@@ -1,11 +1,19 @@
 from functools import lru_cache
 import json
+import sys
 from pathlib import Path
 from typing import Annotated
 
 from pydantic import BeforeValidator, Field
 
-MODEL_ID_ALIASES_PATH = Path("model_aliases.json")  # TODO: make configurable
+# Frozen PyInstaller bundles are not launched from a stable working directory.
+# Keep both source and frozen installations independent of the current cwd.
+_ROOT = (
+    Path(sys._MEIPASS)
+    if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parents[2]
+)
+MODEL_ID_ALIASES_PATH = _ROOT / "model_aliases.json"
 
 
 @lru_cache
