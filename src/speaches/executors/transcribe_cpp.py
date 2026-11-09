@@ -246,7 +246,12 @@ class TranscribeCppModelManager(BaseModelManager):
             language = resolve_language_hint(model, request.language)
             timestamps = resolve_timestamp_mode(model, request.timestamp_granularities)
             with model.session() as session:
-                longform_profile = profile_for_arch(getattr(model, "arch", ""), request.audio.duration)
+                arch = getattr(model, "arch", "")
+                longform_profile = (
+                    None
+                    if supports_native_longform(request.model, arch)
+                    else profile_for_arch(arch, request.audio.duration)
+                )
                 if longform_profile is not None:
                     result = run_longform(
                         session,
@@ -450,11 +455,22 @@ def transcribe_result_to_response(
 def resolve_timestamp_mode(model: Any, requested_granularities: TimestampGranularities) -> str:
     """Respect the decoder's timestamp contract, then acoustically align if requested."""
     supported = getattr(getattr(model, "capabilities", None), "max_timestamp_kind", "none")
-    if supported == "word" and "word" in requested_granularities:
+    # The Parakeet-TDT transducer exposes token granularity, which includes
+    # native word and segment timing. Preserve it instead of silently
+    # downgrading the request.
+    if supported in ("word", "token") and "word" in requested_granularities:
         return "word"
-    if supported in ("word", "segment") and ("segment" in requested_granularities or "word" in requested_granularities):
+    if supported in ("word", "token", "segment") and (
+        "segment" in requested_granularities or "word" in requested_granularities
+    ):
         return "segment"
     return "none"
+
+
+def supports_native_longform(model_id: str, architecture: str) -> bool:
+    # Parakeet Ultra's built-in VAD performs its own pause-aware segmentation.
+    # Generic 30-second windows discard that native context and word timing.
+    return architecture == "parakeet" and "parakeet-ultra" in model_id.lower()
 
 
 def resolve_language_hint(model: Any, requested: str | None) -> str | None:
