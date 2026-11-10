@@ -7,7 +7,7 @@ dependencies = [
     "ctranslate2>=4.5.0",
     "transcribe-cpp==0.4.0",
     "fastapi>=0.121.1",
-    "faster-whisper>=1.1.1",
+    "faster-whisper>=1.2.1",
     "huggingface-hub>=0.33.4",
     "kokoro-onnx[gpu]>=0.4.5,<0.5.0",
     "numpy>=2.3.1",
