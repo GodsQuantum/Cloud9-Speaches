@@ -432,6 +432,9 @@ def test_registered_handlers_declare_actual_external_vad_consumption() -> None:
 def test_auxiliary_vad_is_lazy_and_capability_driven() -> None:
     from types import SimpleNamespace
 
+    import numpy as np
+
+    from speaches.audio import Audio
     from speaches.routers.stt import speech_segments_for_transcription
 
     calls = []
@@ -441,7 +444,7 @@ def test_auxiliary_vad_is_lazy_and_capability_driven() -> None:
             calls.append(request)
             return [{"start": 0, "end": 800}]
 
-    sample = SimpleNamespace()
+    sample = Audio(np.zeros(16_000, dtype=np.float32), sample_rate=16_000)
     native = SimpleNamespace(consumes_external_speech_segments=False)
     requires_external = SimpleNamespace(consumes_external_speech_segments=True)
     assert speech_segments_for_transcription(native, FakeVad(), sample) == []

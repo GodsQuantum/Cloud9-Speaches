@@ -345,7 +345,10 @@ def optionally_align_words(result: Any, *, request: Any, language: str | None) -
     # underlying ASR segments. Collapsing them into one long segment causes
     # downstream CTC aligners to reject audio >38 s, despite acoustic words
     # having been verified against these exact segments above.
-    if not segments or not any(seg.t1_ms > seg.t0_ms for seg in segments):
+    if len(segments) <= 1 or not any(seg.t1_ms > seg.t0_ms for seg in segments):
+        # A single coarse ASR interval carries no internal chunk boundary.
+        # Prefer acoustically verified word bounds instead of its padding;
+        # preserve meaningful multiple source chunks unchanged.
         segments = (SimpleNamespace(text=result.text, t0_ms=words[0].t0_ms, t1_ms=words[-1].t1_ms),)
     return SimpleNamespace(
         text=result.text,
