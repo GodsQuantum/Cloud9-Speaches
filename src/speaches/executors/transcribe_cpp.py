@@ -195,6 +195,8 @@ class TranscribeCppDiarizationModelManager(BaseModelManager):
 
 
 class TranscribeCppModelManager(BaseModelManager):
+    consumes_external_speech_segments = False
+
     def __init__(self, ttl: int, backend: str = "vulkan") -> None:
         super().__init__(ttl)
         self.backend = backend

@@ -126,6 +126,11 @@ class SelfDisposingModel[T]:
 
 
 class BaseModelManager[T](ABC):
+    # Capability contract: handlers reading TranscriptionRequest.speech_segments
+    # retain the external VAD. Other handlers declare False and do not
+    # load Silero unnecessarily. New implementations default to safe True.
+    consumes_external_speech_segments: bool = True
+
     def __init__(self, ttl: int) -> None:
         self.ttl = ttl
         self.loaded_models: OrderedDict[str, SelfDisposingModel[T]] = OrderedDict()

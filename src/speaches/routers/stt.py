@@ -27,9 +27,10 @@ from speaches.executors.shared.handler_protocol import (
     TranscriptionRequest,
     TranslationRequest,
     TranslationResponse,
+    VadHandler,
     VadRequest,
 )
-from speaches.executors.silero_vad_v5 import VadOptions
+from speaches.executors.silero_vad_v5 import SpeechTimestamp, VadOptions
 from speaches.model_aliases import ModelId
 from speaches.routers.utils import find_executor_for_model_or_raise, get_model_card_data_or_raise
 from speaches.text_utils import format_as_sse
@@ -46,6 +47,32 @@ DEFAULT_RESPONSE_FORMAT: ResponseFormat = "json"
 
 # NOTE: copied from `faster_whisper.transcribe`
 DEFAULT_VAD_OPTIONS = VadOptions(min_silence_duration_ms=160, max_speech_duration_s=30)
+
+
+def needs_external_vad(model_manager: object) -> bool:
+    """Decide from a capability contract, never a model or backend name.
+
+    Only compute an auxiliary VAD if this handler can actually consume its
+    speech segments. Unknown or future managers default conservatively to
+    True, so an undeclared capability cannot silently change behavior.
+    """
+    return bool(getattr(model_manager, "consumes_external_speech_segments", True))
+
+
+def speech_segments_for_transcription(
+    transcription_manager: object,
+    vad_manager: VadHandler,
+    audio: AudioFileDependency,
+) -> list[SpeechTimestamp]:
+    """Only run costly external VAD if its output is consumed by this backend.
+
+    Backend-independent capability contract. Unknown implementations retain
+    the previous behavior, so adding a new model never silently omits VAD.
+    """
+    if not needs_external_vad(transcription_manager):
+        return []
+    vad_request = VadRequest(audio=audio, vad_options=DEFAULT_VAD_OPTIONS)
+    return vad_manager.handle_vad_request(vad_request)
 
 
 def translation_response_to_http_response(res: TranslationResponse) -> Response:  # noqa: RET503  # pyrefly: ignore[bad-return]
@@ -151,8 +178,11 @@ def transcribe_file(
         model, transcription_model_card_data, executor_registry.transcription
     )
 
-    vad_request = VadRequest(audio=audio, vad_options=DEFAULT_VAD_OPTIONS)
-    speech_segments = executor_registry.vad.model_manager.handle_vad_request(vad_request)
+    speech_segments = speech_segments_for_transcription(
+        transcription_executor.model_manager,
+        executor_registry.vad.model_manager,
+        audio,
+    )
 
     transcription_request = TranscriptionRequest(
         audio=audio,

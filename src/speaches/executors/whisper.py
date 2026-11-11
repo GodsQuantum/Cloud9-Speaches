@@ -128,6 +128,8 @@ whisper_model_registry = WhisperModelRegistry(hf_model_filter=hf_model_filter)
 
 
 class WhisperModelManager(BaseModelManager[WhisperModel]):
+    consumes_external_speech_segments = True
+
     def __init__(self, ttl: int, whisper_config: WhisperConfig) -> None:
         super().__init__(ttl)
         self.whisper_config = whisper_config

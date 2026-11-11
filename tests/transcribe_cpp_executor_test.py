@@ -402,3 +402,55 @@ def test_sortformer_manager_loads_q8_with_vulkan(monkeypatch, tmp_path) -> None:
     loaded = manager._load_fn(transcribe_cpp.SORTFORMER_MODEL_ID)
     assert isinstance(loaded, FakeModel)
     assert calls == [(str(model_path), "vulkan")]
+
+
+def test_vad_decision_follows_capability_not_backend_name() -> None:
+    from types import SimpleNamespace
+
+    from speaches.routers.stt import needs_external_vad
+
+    native_segmentation = SimpleNamespace(consumes_external_speech_segments=False)
+    requires_auxiliary_silero = SimpleNamespace(consumes_external_speech_segments=True)
+    next_generation_backend = SimpleNamespace()
+    assert needs_external_vad(native_segmentation) is False
+    assert needs_external_vad(requires_auxiliary_silero) is True
+    assert needs_external_vad(next_generation_backend) is True
+
+
+def test_registered_handlers_declare_actual_external_vad_consumption() -> None:
+    from speaches.executors.parakeet import ParakeetModelManager
+    from speaches.executors.transcribe_cpp import TranscribeCppModelManager
+    from speaches.executors.whisper import WhisperModelManager
+
+    # Neither implementation reads TranscriptionRequest.speech_segments.
+    assert TranscribeCppModelManager.consumes_external_speech_segments is False
+    assert ParakeetModelManager.consumes_external_speech_segments is False
+    # Whisper processes the VAD regions via merge_segments().
+    assert WhisperModelManager.consumes_external_speech_segments is True
+
+
+def test_auxiliary_vad_is_lazy_and_capability_driven() -> None:
+    from types import SimpleNamespace
+
+    from speaches.routers.stt import speech_segments_for_transcription
+
+    calls = []
+
+    class FakeVad:
+        def handle_vad_request(self, request):
+            calls.append(request)
+            return [{"start": 0, "end": 800}]
+
+    sample = SimpleNamespace()
+    native = SimpleNamespace(consumes_external_speech_segments=False)
+    requires_external = SimpleNamespace(consumes_external_speech_segments=True)
+    assert speech_segments_for_transcription(native, FakeVad(), sample) == []
+    assert calls == []
+
+    assert speech_segments_for_transcription(requires_external, FakeVad(), sample) == [{"start": 0, "end": 800}]
+    assert len(calls) == 1
+    assert calls[0].audio is sample
+
+    # A future manager with undeclared capability keeps legacy Silero use.
+    assert speech_segments_for_transcription(SimpleNamespace(), FakeVad(), sample)
+    assert len(calls) == 2

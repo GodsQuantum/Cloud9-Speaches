@@ -109,6 +109,8 @@ parakeet_model_registry = NemoConformerTdtModelRegistry(hf_model_filter=hf_model
 
 
 class ParakeetModelManager(BaseModelManager[TextResultsAsrAdapter]):
+    consumes_external_speech_segments = False
+
     def __init__(self, ttl: int, ort_opts: OrtOptions) -> None:
         super().__init__(ttl)
         self.ort_opts = ort_opts
