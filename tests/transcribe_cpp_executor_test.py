@@ -435,14 +435,16 @@ def test_auxiliary_vad_is_lazy_and_capability_driven() -> None:
     import numpy as np
 
     from speaches.audio import Audio
+    from speaches.executors.shared.handler_protocol import VadRequest
+    from speaches.executors.silero_vad_v5 import SpeechTimestamp
     from speaches.routers.stt import speech_segments_for_transcription
 
-    calls = []
+    calls: list[VadRequest] = []
 
     class FakeVad:
-        def handle_vad_request(self, request):
+        def handle_vad_request(self, request: VadRequest, **_kwargs: object) -> list[SpeechTimestamp]:
             calls.append(request)
-            return [{"start": 0, "end": 800}]
+            return [SpeechTimestamp(start=0, end=800)]
 
     sample = Audio(np.zeros(16_000, dtype=np.float32), sample_rate=16_000)
     native = SimpleNamespace(consumes_external_speech_segments=False)
@@ -450,7 +452,9 @@ def test_auxiliary_vad_is_lazy_and_capability_driven() -> None:
     assert speech_segments_for_transcription(native, FakeVad(), sample) == []
     assert calls == []
 
-    assert speech_segments_for_transcription(requires_external, FakeVad(), sample) == [{"start": 0, "end": 800}]
+    assert speech_segments_for_transcription(requires_external, FakeVad(), sample) == [
+        SpeechTimestamp(start=0, end=800)
+    ]
     assert len(calls) == 1
     assert calls[0].audio is sample
 
