@@ -1,6 +1,7 @@
 """CPU-only smoke for existing AutoSubs service (run in isolated test container)."""
 
 from itertools import pairwise
+import os
 from pathlib import Path
 from statistics import mean
 from types import SimpleNamespace
@@ -19,7 +20,7 @@ words = align_words(
     audio=audio,
     transcript=reference,
     language="fr",
-    endpoint="http://192.168.1.219:8006/align",
+    endpoint=os.environ.get("ALIGNMENT_URL", "http://127.0.0.1:8006/align"),
 )
 assert len(words) == len(reference.split()) == 37
 assert all(w.t1_ms > w.t0_ms for w in words)

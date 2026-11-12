@@ -4,7 +4,7 @@ set -Eeuo pipefail
 AUDIO=$1
 REFERENCE=$2
 OUTPUT=$3
-BENCH_PY=${CLOUD9_STT_BENCH_PY:-/srv/lxc/ia-compute/data/bench-tools/cloud9_fr_stt_benchmark.py}
+BENCH_PY=${CLOUD9_STT_BENCH_PY:?Provide the benchmark helper file path}
 LOCK=/run/cloud9-gpu.lock
 exec 9>"$LOCK"
 flock -n 9 || { echo "Cloud9 GPU lock busy" >&2; exit 4; }
