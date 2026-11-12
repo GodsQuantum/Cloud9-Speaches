@@ -61,17 +61,17 @@ are not claimed without manual waveform annotation.
 ## Rollback
 
 **Production rollback (CT410, no mount change):**
-- Compose: `/srv/lxc/ia-compute/compose/speaches/compose.yaml`.
+- Compose: `/etc/speaches/compose.yaml
 - Current image: `cloud9/speaches:native-ctc-20261018-certified`.
 - Previous tested image retained: `cloud9/speaches:native-ctc-validated-20261017`.
 - In that Compose file replace ONLY the current `image:` value with the
   previous image tag. Run:
-  `docker compose -f /srv/lxc/ia-compute/compose/speaches/compose.yaml up -d --no-deps --force-recreate speaches`
+  `docker compose -f /etc/speaches/compose.yaml up -d --no-deps --force-recreate speaches`
   inside CT410. Verify `http://127.0.0.1:8005/health` and
   `http://127.0.0.1:8005/v1/audio/alignment/health` return HTTP 200.
   Keep `cgroup_parent: cloud9-protected.slice`, all data binds and GPU access.
 - A separate legacy CrispASR compose survives in CT410 at
-  `/home/arezki/Stacks/autosubs-aligner/compose.vulkan.yaml`, but is STOPPED
+  `/opt/speaches/legacy-aligner but is STOPPED
   and its port 8010 is not currently active. Reactivate only for a deliberate
   fallback, never as an implicit dependency or without checking the client URL.
 - Base image `cloud9/speaches:fastconformer-20261017` is retained for rebuilds.
@@ -85,7 +85,7 @@ the two copies byte-identical whenever core behavior changes.
 
 The old standalone CTC container is STOPPED; only its Compose recipe
 and base image remain for rollback. Native port :8005 is the active API.
-AutoSubs production alignment URL is `http://192.168.1.219:8005/align`.
+AutoSubs production alignment URL is `http://aligner.example.test:8005/align`.
 
 CT410 unprivileged root mapped to host UID 100000 previously hit the kernel
 keyring byte quota (~19,828 / 20,000), causing a disposable Docker run to

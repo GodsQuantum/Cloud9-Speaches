@@ -71,6 +71,6 @@ def test_native_ctc_deployment_guide_keeps_reversible_image_upgrade() -> None:
     repo = Path(__file__).resolve().parents[2]
     guide = (repo / "docs/cloud9-native-vulkan-ctc.md").read_text(encoding="utf8")
     assert "## Rollback" in guide
-    assert "docker compose -f /srv/lxc/ia-compute/compose/speaches/compose.yaml" in guide
+    assert "docker compose -f /etc/speaches/compose.yaml" in guide
     assert "cloud9-protected.slice" in guide
     assert "CUDA and Metal binaries / real hardware throughput are **not certified**" in guide

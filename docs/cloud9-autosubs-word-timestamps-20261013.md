@@ -4,8 +4,8 @@
 
 ## Existing infrastructure
 
-- STT: Cloud9-Speaches (CT410 `192.168.1.219:8005`), transcribe.cpp Qwen3-ASR/Nemotron GGUF Vulkan; Whisper CPU fallback, plus TTS and diarization.
-- **Already installed** CPU WhisperX forced-alignment service: `autosubs-aligner`, `autosubs-whisperx-aligner:3.8.6-v1`, `192.168.1.219:8006`, `POST /align`; models `fr:default`, `ALIGN_DEVICE=cpu`, four threads, healthy.
+- STT: Cloud9-Speaches (CT410 `aligner.example.test:8005`), transcribe.cpp Qwen3-ASR/Nemotron GGUF Vulkan; Whisper CPU fallback, plus TTS and diarization.
+- **Already installed** CPU WhisperX forced-alignment service: `autosubs-aligner`, `autosubs-whisperx-aligner:3.8.6-v1`, `aligner.example.test:8006`, `POST /align`; models `fr:default`, `ALIGN_DEVICE=cpu`, four threads, healthy.
 - AutoSubs GitHub source of truth: https://github.com/GodsQuantum/AutoSubs . **Do not create another aligner, rename these services or change paths.**
 - Source limitation: `transcribe_cpp.resolve_timestamp_mode` correctly emits `none` for Qwen3-ASR: this GGUF model does **not** natively support word timestamps. Never falsify native support.
 
@@ -33,7 +33,7 @@ In this branch only: `src/speaches/executors/cloud9_word_alignment.py` validates
 Suggested opt-in environment *after all gates pass*:
 
 ```ini
-CLOUD9_WORD_ALIGNMENT_URL=http://192.168.1.219:8006/align
+CLOUD9_WORD_ALIGNMENT_URL=http://aligner.example.test:8006/align
 CLOUD9_WORD_ALIGNMENT_STRATEGY=native-first
 CLOUD9_WORD_ALIGNMENT_STRICT=1
 ```
