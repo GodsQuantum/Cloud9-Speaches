@@ -1,6 +1,6 @@
 # Multi-node speech
 
-Cloud9-Speaches scales across machines by **routing complete STT/TTS jobs to replicated workers**. Do not split one
+Speaches Reloaded scales across machines by **routing complete STT/TTS jobs to replicated workers**. Do not split one
 audio transcription across machines at the engine level unless a model explicitly supports chunking with a
 correct merge policy.
 

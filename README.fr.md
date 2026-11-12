@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Cloud9-Speaches/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Cloud9-Speaches">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Logo Speaches Reloaded">
 </p>
 
-<h1 align="center">Cloud9-Speaches</h1>
+<h1 align="center">Speaches Reloaded</h1>
 
 <p align="center">
   <strong>Une seule API vocale compatible OpenAI. CPU, Vulkan ou CUDA.</strong><br>
@@ -19,9 +19,9 @@
 
 ---
 
-**Cloud9-Speaches** est une distribution communautaire de Speaches. Elle conserve son interface et son API compatible OpenAI, puis ajoute transcribe.cpp pour utiliser des modèles vocaux GGUF modernes sans imposer la même stack d'inférence à toutes les machines.
+**Speaches Reloaded** est une distribution communautaire de Speaches. Elle conserve son interface et son API compatible OpenAI, puis ajoute transcribe.cpp pour utiliser des modèles vocaux GGUF modernes sans imposer la même stack d'inférence à toutes les machines.
 
-## ✨ Pourquoi Cloud9-Speaches ?
+## ✨ Pourquoi Speaches Reloaded ?
 
 - **3 images optimisées** — CPU, Vulkan pour AMD/Intel, CUDA pour NVIDIA.
 - **Une API unique** — les clients Speaches/OpenAI gardent les mêmes endpoints.
@@ -53,8 +53,8 @@ AMD et Intel partagent volontairement Vulkan : deux images séparées n'apporter
 ## 🚀 Installation
 
 ~~~bash
-git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
-cd Cloud9-Speaches
+git clone https://github.com/GodsQuantum/Speaches-Reloaded.git
+cd Speaches-Reloaded
 cp .env.example .env
 ~~~
 
@@ -101,11 +101,11 @@ Le cache Hugging Face est stocké dans le volume Docker persistant speaches-mode
 
 ## Licence
 
-Cloud9-Speaches est une distribution communautaire non officielle. Le projet conserve l'historique Git et la licence MIT de Speaches ; transcribe.cpp reste une dépendance externe avec sa propre licence et ses notices tierces.
+Speaches Reloaded est une distribution communautaire non officielle. Le projet conserve l'historique Git et la licence MIT de Speaches ; transcribe.cpp reste une dépendance externe avec sa propre licence et ses notices tierces.
 
 ## Conseil automatique de profil CPU, Vulkan ou CUDA
 
-**Téléchargements :** [candidats natifs cinq architectures](https://github.com/GodsQuantum/Cloud9-Speaches/releases/tag/desktop-v0.1.0-rc.1). Ils ont passé un vrai test acoustique CPU, mais **pas la signature officielle Windows, la notarisation Apple Developer ID ni la validation GPU sur toutes les machines**.
+**Téléchargements :** [candidats natifs cinq architectures](https://github.com/GodsQuantum/Speaches-Reloaded/releases/tag/desktop-v0.1.0-rc.1). Ils ont passé un vrai test acoustique CPU, mais **pas la signature officielle Windows, la notarisation Apple Developer ID ni la validation GPU sur toutes les machines**.
 
 Le diagnostic est prévu sur **l'hôte Linux Docker** et ne modifie pas le système. Il conseille CUDA si nvidia-smi fonctionne, Vulkan si le render node est accessible ET si vulkaninfo réussit, sinon CPU :
 
