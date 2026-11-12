@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Cloud9-Speaches/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches 标志">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded 标志">
 </p>
 
-<h1 align="center">Cloud9-Speaches</h1>
+<h1 align="center">Speaches Reloaded</h1>
 
 <p align="center">
   <strong>一个兼容 OpenAI 的语音 API。支持 CPU、Vulkan 和 CUDA。</strong><br>
@@ -19,7 +19,7 @@
 
 ---
 
-**Cloud9-Speaches** 是 Speaches 的非官方社区发行版。它保留 Speaches 的 Web UI、模型生命周期管理和 OpenAI 兼容 API，同时加入 transcribe.cpp，让同一个服务可以运行现代 GGUF 语音模型。
+**Speaches Reloaded** 是 Speaches 的非官方社区发行版。它保留 Speaches 的 Web UI、模型生命周期管理和 OpenAI 兼容 API，同时加入 transcribe.cpp，让同一个服务可以运行现代 GGUF 语音模型。
 
 ## ✨ 主要特点
 
@@ -44,8 +44,8 @@ AMD 与 Intel 共用 Vulkan 镜像，因为两者使用相同的推理后端，�
 ## 🚀 安装
 
 ~~~bash
-git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
-cd Cloud9-Speaches
+git clone https://github.com/GodsQuantum/Speaches-Reloaded.git
+cd Speaches-Reloaded
 cp .env.example .env
 ~~~
 
@@ -92,11 +92,11 @@ Hugging Face 模型存放在持久化 Docker 卷 speaches-models 中，不会被
 
 ## 许可证
 
-Cloud9-Speaches 是非官方社区发行版，保留 Speaches 的 Git 历史与 MIT 许可证。transcribe.cpp 作为外部依赖构建，并保留其自身许可证及第三方声明。
+Speaches Reloaded 是非官方社区发行版，保留 Speaches 的 Git 历史与 MIT 许可证。transcribe.cpp 作为外部依赖构建，并保留其自身许可证及第三方声明。
 
 ## CPU / Vulkan / CUDA 硬件检测与性能建议
 
-**下载安装包：** [Linux x64/ARM64、Windows x64、macOS Apple Silicon 和 Intel 五种架构](https://github.com/GodsQuantum/Cloud9-Speaches/releases/tag/desktop-v0.1.0-rc.1)。候选版本通过了真实 CPU FastConformer 语音测试，但 Windows/macOS **仍无正式签名和 Apple Developer ID 公证**，也未验证所有设备的 GPU 加速。
+**下载安装包：** [Linux x64/ARM64、Windows x64、macOS Apple Silicon 和 Intel 五种架构](https://github.com/GodsQuantum/Speaches-Reloaded/releases/tag/desktop-v0.1.0-rc.1)。候选版本通过了真实 CPU FastConformer 语音测试，但 Windows/macOS **仍无正式签名和 Apple Developer ID 公证**，也未验证所有设备的 GPU 加速。
 
 针对 Linux Docker 主机的**只读**诊断脚本：nvidia-smi 正常工作才建议 CUDA；必须存在可访问的 renderD 设备且 vulkaninfo 成功才建议 Vulkan；否则推荐 CPU。不更改 Compose、磁盘挂载、模型或正在运行的服务。
 

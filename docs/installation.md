@@ -1,6 +1,6 @@
 # Installation
 
-Cloud9-Speaches publishes three Linux x86-64 images:
+Speaches Reloaded publishes three Linux x86-64 images:
 
 | Hardware / choice | Image | Compose |
 |---|---|---|
@@ -11,7 +11,7 @@ Cloud9-Speaches publishes three Linux x86-64 images:
 ## Common setup
 
 ~~~bash
-git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
+git clone https://github.com/GodsQuantum/Speaches-Reloaded.git
 cd Speaches-Reloaded
 cp .env.example .env
 ~~~

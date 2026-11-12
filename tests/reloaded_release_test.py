@@ -12,7 +12,7 @@ def read(path: str) -> str:
 class ReloadedReleaseContract(unittest.TestCase):
     def test_brand_and_translations_exist(self) -> None:
         for path in ("README.md", "README.fr.md", "README.zh-CN.md"):
-            self.assertIn("Cloud9-Speaches", read(path))
+            self.assertIn("Speaches Reloaded", read(path))
 
     def test_logo_is_a_real_svg(self) -> None:
         logo = read("docs/assets/speaches-reloaded-logo.svg")
@@ -90,9 +90,9 @@ class ReloadedReleaseContract(unittest.TestCase):
         for alias in ("whisper-1", "stt-fast", "stt-balanced", "stt-quality", "tts-fast", "tts-quality"):
             self.assertIn(alias, aliases)
 
-    def test_ui_points_to_cloud9_speaches_documentation(self) -> None:
+    def test_ui_points_to_speaches_reloaded_documentation(self) -> None:
         text = read("src/speaches/ui/app.py")
-        self.assertIn("GodsQuantum/Cloud9-Speaches", text)
+        self.assertIn("GodsQuantum/Speaches-Reloaded", text)
         self.assertNotIn("https://speaches.ai", text)
 
 
