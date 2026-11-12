@@ -8,11 +8,7 @@ from pydantic import BeforeValidator, Field
 
 # Frozen PyInstaller bundles are not launched from a stable working directory.
 # Keep both source and frozen installations independent of the current cwd.
-_ROOT = (
-    Path(vars(sys)["_MEIPASS"])
-    if getattr(sys, "frozen", False)
-    else Path(__file__).resolve().parents[2]
-)
+_ROOT = Path(vars(sys)["_MEIPASS"]) if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[2]
 MODEL_ID_ALIASES_PATH = _ROOT / "model_aliases.json"
 
 

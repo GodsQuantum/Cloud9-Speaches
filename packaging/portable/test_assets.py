@@ -34,9 +34,9 @@ def test_portable_builder_embeds_static_assets() -> None:
     assert "cwd=" in build
 
 
-
 def test_model_aliases_independent_of_launch_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     import speaches.model_aliases as aliases
+
     monkeypatch.chdir(tmp_path)
     aliases.load_model_id_aliases.cache_clear()
     assert aliases.MODEL_ID_ALIASES_PATH == ROOT / "model_aliases.json"
@@ -46,9 +46,7 @@ def test_model_aliases_independent_of_launch_dir(monkeypatch: pytest.MonkeyPatch
 def test_model_aliases_resolve_from_frozen_bundle(tmp_path: Path) -> None:
     import speaches.model_aliases as aliases
 
-    (tmp_path / "model_aliases.json").write_text(
-        '{"private-test-alias": "test/model"}', encoding="utf-8"
-    )
+    (tmp_path / "model_aliases.json").write_text('{"private-test-alias": "test/model"}', encoding="utf-8")
     try:
         with (
             patch.object(sys, "frozen", new=True, create=True),
@@ -63,7 +61,7 @@ def test_model_aliases_resolve_from_frozen_bundle(tmp_path: Path) -> None:
 
 def test_builder_embeds_acoustic_assets() -> None:
     build = (ROOT / "packaging/portable/build.py").read_text()
-    assert 'f"{ROOT / \'model_aliases.json\'}:."' in build
+    assert "f\"{ROOT / 'model_aliases.json'}:.\"" in build
     assert '"--collect-all",\n        "faster_whisper"' in build
     assert '"silero_encoder_v5.onnx"' in build
     assert '"silero_decoder_v5.onnx"' in build
