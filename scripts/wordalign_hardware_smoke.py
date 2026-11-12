@@ -1,7 +1,7 @@
 """CPU-only smoke for existing AutoSubs service (run in isolated test container)."""
 
-import os
 from itertools import pairwise
+import os
 from pathlib import Path
 from statistics import mean
 from types import SimpleNamespace
