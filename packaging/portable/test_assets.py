@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 import sys
 from typing import TYPE_CHECKING
@@ -43,7 +44,6 @@ def test_model_aliases_independent_of_launch_dir(monkeypatch: pytest.MonkeyPatch
 
 
 def test_model_aliases_resolve_from_frozen_bundle(tmp_path: Path) -> None:
-    import importlib
     import speaches.model_aliases as aliases
 
     (tmp_path / "model_aliases.json").write_text(
@@ -55,7 +55,7 @@ def test_model_aliases_resolve_from_frozen_bundle(tmp_path: Path) -> None:
             patch.object(sys, "_MEIPASS", str(tmp_path), create=True),
         ):
             importlib.reload(aliases)
-            assert aliases.MODEL_ID_ALIASES_PATH == tmp_path / "model_aliases.json"
+            assert tmp_path / "model_aliases.json" == aliases.MODEL_ID_ALIASES_PATH
             assert aliases.resolve_model_id_alias("private-test-alias") == "test/model"
     finally:
         importlib.reload(aliases)
