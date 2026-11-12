@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GodsQuantum/Cloud9-Speaches/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Cloud9-Speaches logo">
+  <img src="https://raw.githubusercontent.com/GodsQuantum/Speaches-Reloaded/main/docs/assets/speaches-reloaded-logo.svg" width="138" alt="Speaches Reloaded logo">
 </p>
 
-<h1 align="center">Cloud9-Speaches</h1>
+<h1 align="center">Speaches Reloaded</h1>
 
 <p align="center">
   <strong>One OpenAI-compatible speech API. CPU, Vulkan or CUDA.</strong><br>
-  Cloud9-Speaches: Speaches + transcribe.cpp, packaged for fast self-hosted STT/TTS on NVIDIA, AMD, Intel and CPU-only servers.
+  Speaches Reloaded: Speaches + transcribe.cpp, packaged for fast self-hosted STT/TTS on NVIDIA, AMD, Intel and CPU-only servers.
 </p>
 
 <p align="center">
@@ -14,19 +14,19 @@
   <img alt="Docker" src="https://img.shields.io/badge/runtime-Docker-2496ed">
   <img alt="GHCR" src="https://img.shields.io/badge/images-GHCR-54cd8a">
   <img alt="CPU Vulkan CUDA" src="https://img.shields.io/badge/backends-CPU%20%7C%20Vulkan%20%7C%20CUDA-9d8cf5">
-  <a href="https://github.com/GodsQuantum/Cloud9-Speaches/actions/workflows/release-images.yml"><img alt="Images" src="https://github.com/GodsQuantum/Cloud9-Speaches/actions/workflows/release-images.yml/badge.svg"></a>
+  <a href="https://github.com/GodsQuantum/Speaches-Reloaded/actions/workflows/release-images.yml"><img alt="Images" src="https://github.com/GodsQuantum/Speaches-Reloaded/actions/workflows/release-images.yml/badge.svg"></a>
 </p>
 
 <p align="center">🇫🇷 <a href="README.fr.md">Français</a> · 🇨🇳 <a href="README.zh-CN.md">简体中文</a></p>
 
 ---
 
-**Cloud9-Speaches** (formerly Speaches Reloaded) is a community distribution of [Speaches](https://github.com/speaches-ai/speaches). It keeps the Speaches UI and OpenAI-compatible API, then adds a native [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) STT path so the same server can use modern GGUF speech models without forcing every machine into one inference stack.
+**Speaches Reloaded** is a community distribution of [Speaches](https://github.com/speaches-ai/speaches). It keeps the Speaches UI and OpenAI-compatible API, then adds a native [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) STT path so the same server can use modern GGUF speech models without forcing every machine into one inference stack.
 
 The goal is simple: clone the repo, choose the Compose file matching the hardware, and keep the same OpenAI-compatible /v1 speech API.
 
-> **Repository transition:** the product/canonical name is now **Cloud9-Speaches**. The GitHub repository has been renamed to [GodsQuantum/Cloud9-Speaches](https://github.com/GodsQuantum/Cloud9-Speaches), preserving commit history and GitHub redirects. Existing GHCR image tags remain `ghcr.io/godsquantum/speaches-reloaded` for deployment compatibility; do not change image URLs until new package tags are published and validated.
-## ✨ Why Cloud9-Speaches?
+> **Product taxonomy:** **Speaches Reloaded** is an independently maintained speech product, not a host-specific Cloud9 patch bundle. The canonical GitHub repository is [GodsQuantum/Speaches-Reloaded](https://github.com/GodsQuantum/Speaches-Reloaded), preserving commit history and GitHub redirects. Existing GHCR image tags remain `ghcr.io/godsquantum/speaches-reloaded` for deployment compatibility; do not change image URLs until new package tags are published and validated.
+## ✨ Why Speaches Reloaded?
 
 - **Three optimized images** — CPU-only, Vulkan for AMD/Intel, CUDA for NVIDIA.
 - **One API** — keep Speaches-compatible clients, integrations and model discovery.
@@ -63,8 +63,8 @@ AMD and Intel intentionally share one Vulkan image. Maintaining separate images 
 Requirements: Docker Engine + Docker Compose v2. NVIDIA users also need the NVIDIA Container Toolkit.
 
 ~~~bash
-git clone https://github.com/GodsQuantum/Cloud9-Speaches.git
-cd Cloud9-Speaches
+git clone https://github.com/GodsQuantum/Speaches-Reloaded.git
+cd Speaches-Reloaded
 cp .env.example .env
 ~~~
 
@@ -126,7 +126,7 @@ Models live in the persistent speaches-models Docker volume. They are not baked 
 OpenAI-compatible clients
           │
           ▼
-  Cloud9-Speaches
+  Speaches Reloaded
     │     │      │
     │     │      ├── Kokoro / Piper ──► TTS
     │     ├──────── faster-whisper ───► Whisper STT
@@ -156,7 +156,7 @@ docker build -f Dockerfile --build-arg TRANSCRIBE_BACKEND=cpu -t speaches-reload
 ~~~
 ## Credits & license
 
-Cloud9-Speaches is an unofficial community distribution built on Speaches and transcribe.cpp. It is not affiliated with or endorsed by the upstream projects.
+Speaches Reloaded is an unofficial community distribution built on Speaches and transcribe.cpp. It is not affiliated with or endorsed by the upstream projects.
 
 The Speaches code and this distribution retain the MIT license and upstream Git history. transcribe.cpp is built as an external dependency and retains its own license and third-party notices.
 
@@ -164,7 +164,7 @@ Thanks to the Speaches and transcribe.cpp maintainers for the foundations Reload
 
 ## Automatic Linux Docker CPU/Vulkan/CUDA hardware advice
 
-**Downloads:** [Native CPU candidates for Linux x64/ARM64, Windows x64 and macOS Intel/Apple Silicon](https://github.com/GodsQuantum/Cloud9-Speaches/releases/tag/desktop-v0.1.0-rc.1). Native checks include a real CPU FastConformer model; **Windows/macOS packages have no official signing or Apple Developer ID notarization, and GPU acceleration is not certified on every client device**.
+**Downloads:** [Native CPU candidates for Linux x64/ARM64, Windows x64 and macOS Intel/Apple Silicon](https://github.com/GodsQuantum/Speaches-Reloaded/releases/tag/desktop-v0.1.0-rc.1). Native checks include a real CPU FastConformer model; **Windows/macOS packages have no official signing or Apple Developer ID notarization, and GPU acceleration is not certified on every client device**.
 
 The Linux host doctor is **read-only**: choose CUDA only if nvidia-smi works, Vulkan only with an accessible render node AND working vulkaninfo; otherwise CPU. It neither changes Compose nor starts services:
 
