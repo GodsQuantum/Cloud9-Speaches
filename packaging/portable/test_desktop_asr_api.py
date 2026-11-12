@@ -52,7 +52,7 @@ def test_desktop_authorized_native_loopback(monkeypatch: pytest.MonkeyPatch) -> 
     [
         ("evil.example:38005", None, "127.0.0.1"),
         ("127.0.0.1:38005", "https://evil.example", "127.0.0.1"),
-        ("127.0.0.1:38005", None, "192.168.1.42"),
+        ("127.0.0.1:38005", None, "172.20.30.10"),
         ("127.0.0.1:8005", None, "127.0.0.1"),
     ],
 )

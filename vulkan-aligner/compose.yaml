@@ -7,7 +7,7 @@ services:
     group_add: ["991"]
     read_only: true
     ports:
-      - "192.0.2.42:8010:8000"
+      - "${VULKAN_ALIGN_BIND_HOST:-127.0.0.1}:8010:8000"
     devices:
       - /dev/dri:/dev/dri
     environment:
@@ -16,7 +16,7 @@ services:
       LD_LIBRARY_PATH: /opt/crispasr/lib
       HOME: /tmp
     volumes:
-      - /srv/ai-models:/ai-models:ro
+      - ${VULKAN_ALIGN_MODEL_DIR:-./models}:/ai-models:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=1024m
     cap_drop: [ALL]

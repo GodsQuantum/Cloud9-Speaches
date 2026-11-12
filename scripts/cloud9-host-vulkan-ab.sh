@@ -53,8 +53,8 @@ pct exec 410 -- docker run --rm --name "cloud9-asr-vulkan-${model//[^a-z0-9-]/-}
   --env HF_HUB_OFFLINE=1 \
   --env OMP_NUM_THREADS=2 \
   --env OPENBLAS_NUM_THREADS=1 \
-  --volume /srv/lxc/ia-compute/appdata/speaches/hf-hub:/home/ubuntu/.cache/huggingface/hub:ro \
-  --volume /srv/lxc/ia-compute/data/bench-fixtures:/bench:ro \
+  --volume "${CLOUD9_BENCH_HF_CACHE:?Set a read-only Hugging Face cache directory}:/home/ubuntu/.cache/huggingface/hub:ro" \
+  --volume "${CLOUD9_BENCH_FIXTURE_DIR:?Set the benchmark fixture directory}:/bench:ro" \
   --volume "$tmp:/testlab:ro" \
   --entrypoint python ghcr.io/godsquantum/speaches-reloaded:latest-vulkan \
   -B /testlab/benchmark.py --backend vulkan --model "$model" --repeats 3
