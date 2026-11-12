@@ -89,6 +89,24 @@ def test_transcribe_manager_loads_selected_gguf_with_vulkan(monkeypatch, tmp_pat
     assert calls == [(str(model_path), "vulkan")]
 
 
+def test_parakeet_ultra_token_timestamp_capability_and_native_longform() -> None:
+    from types import SimpleNamespace
+
+    from speaches.executors import transcribe_cpp
+
+    token_model = SimpleNamespace(capabilities=SimpleNamespace(max_timestamp_kind="token"))
+    assert transcribe_cpp.resolve_timestamp_mode(token_model, ["word"]) == "word"
+    assert transcribe_cpp.resolve_timestamp_mode(token_model, ["segment"]) == "segment"
+    assert transcribe_cpp.resolve_timestamp_mode(token_model, []) == "none"
+    word_model = SimpleNamespace(capabilities=SimpleNamespace(max_timestamp_kind="word"))
+    segment_model = SimpleNamespace(capabilities=SimpleNamespace(max_timestamp_kind="segment"))
+    assert transcribe_cpp.resolve_timestamp_mode(word_model, ["word"]) == "word"
+    assert transcribe_cpp.resolve_timestamp_mode(segment_model, ["word"]) == "segment"
+    assert transcribe_cpp.supports_native_longform("handy-computer/parakeet-ultra-gguf", "parakeet")
+    assert not transcribe_cpp.supports_native_longform("handy-computer/parakeet-tdt-0.6b-v3-gguf", "parakeet")
+    assert not transcribe_cpp.supports_native_longform("handy-computer/Qwen3-ASR-1.7B-gguf", "qwen3_asr")
+
+
 def test_transcribe_result_maps_to_openai_verbose_json() -> None:
     from types import SimpleNamespace
 
