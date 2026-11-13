@@ -66,7 +66,7 @@ jobs:
           uv run --no-sync python -m pytest -q packaging/portable/test_default_models.py packaging/portable/test_custom_asr.py packaging/portable/test_desktop_asr_api.py packaging/portable/test_windowed_smoke.py packaging/portable/test_hardware_models.py packaging/portable/test_linux_cpu_profile.py packaging/portable/test_assets.py packaging/portable/test_acoustic_e2e.py packaging/portable/test_dmg_retry.py
       - name: Install NSIS from GitHub (no Chocolatey feed)
         if: runner.os == 'Windows'
-        uses: negrutiu/nsis-install@f3339c88dba6fd08910d5275a943f8f746d94876 # v2
+        uses: negrutiu/nsis-install@9c575d44c2938a43e38a305caeb403de90303c60 # v3
         with:
           distro: negrutiu
           arch: amd64
